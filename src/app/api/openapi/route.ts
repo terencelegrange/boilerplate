@@ -143,6 +143,16 @@ const spec = {
       },
     },
     "/me/profile": {
+      get: {
+        tags: ["Me"],
+        summary: "Get own profile",
+        description: "Returns the current user's name, email, and avatar number (1–127; null means no avatar saved — caller should derive a default).",
+        responses: {
+          200: { description: "Profile data", content: { "application/json": { schema: { type: "object", properties: { name: { type: "string", nullable: true }, email: { type: "string" }, avatar: { type: "integer", nullable: true, minimum: 1, maximum: 127 } } } } } },
+          401: { description: "Not authenticated" },
+          404: { description: "User not found" },
+        },
+      },
       patch: {
         tags: ["Me"],
         summary: "Update own profile",
@@ -158,6 +168,7 @@ const spec = {
                   email:           { type: "string", format: "email" },
                   currentPassword: { type: "string", description: "Required when changing password" },
                   newPassword:     { type: "string" },
+                  avatar:          { type: "integer", minimum: 1, maximum: 127, description: "Avatar number (1–127); values outside this range are ignored" },
                 },
               },
             },
