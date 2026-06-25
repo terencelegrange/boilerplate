@@ -124,21 +124,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     e.preventDefault();
     setEditError(null);
     setEditSaving(true);
-    const body: Record<string, string> = { name: editName, email: editEmail };
-    if (editNewPw) { body.currentPassword = editCurrentPw; body.newPassword = editNewPw; }
-    const r = await fetch("/api/me/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await r.json();
-    setEditSaving(false);
-    if (!r.ok) { setEditError(data.error ?? "Failed to save"); return; }
-    setEditSuccess(true);
-    setUserName(data.name ?? editName);
-    setEditCurrentPw("");
-    setEditNewPw("");
-    setTimeout(() => { setEditSuccess(false); setShowEditForm(false); }, 1200);
+    try {
+      const body: Record<string, string> = { name: editName, email: editEmail };
+      if (editNewPw) { body.currentPassword = editCurrentPw; body.newPassword = editNewPw; }
+      const r = await fetch("/api/me/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok) { setEditError(data.error ?? "Failed to save"); return; }
+      setEditSuccess(true);
+      setUserName(data.name ?? editName);
+      setEditCurrentPw("");
+      setEditNewPw("");
+      setTimeout(() => { setEditSuccess(false); setShowEditForm(false); }, 1200);
+    } catch {
+      setEditError("Network error — please try again");
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   const navItems = flags.menu

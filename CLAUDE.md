@@ -133,13 +133,15 @@ ADMIN_PASSWORD_HASH="\$2b\$10\$..."   # escape $ as \$ in .env (dotenv-expand)
 
 **Dollar sign escaping:** Next.js uses dotenv-expand. Any `$` in `.env` values (bcrypt hashes, DB passwords) must be escaped as `\$`.
 
+**Default seeded admin:** `ADMIN_EMAIL`/`ADMIN_PASSWORD_HASH` are seeded into `users` by `initDb()` on first request, only if no user with that email already exists. The local `.env` currently seeds `admin@admin.com` / `admin` (hash generated via `bcrypt.hash("admin", 10)`) — a weak placeholder login intended for local/dev use only. Generate a new hash and rotate this before any non-local deployment.
+
 ---
 
 ## Theme System
 - `bp_theme` cookie → `dark` | `light`
 - Root layout (`app/layout.tsx`) reads this SSR and adds `class="dark"` to `<html>`
 - Tailwind uses `darkMode: "class"` — all dark styles use `dark:` prefix
-- Toggle button in sidebar calls `PATCH /api/me/theme` and updates `document.documentElement.classList`
+- Toggle button in top bar (sun/moon icon) calls `PATCH /api/me/theme` and updates `document.documentElement.classList`
 
 ---
 
