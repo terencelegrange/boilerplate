@@ -4,12 +4,24 @@ import { getSession, signToken, COOKIE } from "@/lib/auth";
 import { verifyPassword, hashPassword } from "@/lib/initDb";
 import { auditLog, getIp } from "@/lib/audit";
 
+export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const userId = parseInt(session.sub, 10);
+  const rows = await prisma.$queryRaw<{ name: string | null; email: string; avatar: number | null }[]>`
+    SELECT name, email, avatar FROM users WHERE id = ${userId} LIMIT 1
+  `;
+  if (!rows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(rows[0]);
+}
+
 export async function PATCH(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = parseInt(session.sub, 10);
-  const { name, email, currentPassword, newPassword } = await req.json();
+  const { name, email, currentPassword, newPassword, avatar } = await req.json();
 
   // If changing password, verify current one first
   if (newPassword) {
@@ -34,6 +46,11 @@ export async function PATCH(req: NextRequest) {
     const hash = await hashPassword(newPassword);
     updates.push("password_hash = ?");
     values.push(hash);
+  }
+
+  if (avatar !== undefined && Number.isInteger(avatar) && avatar >= 1 && avatar <= 127) {
+    updates.push("avatar = ?");
+    values.push(avatar);
   }
 
   if (updates.length === 0) {
