@@ -26,6 +26,11 @@ export async function initDb() {
     `;
 
     await prisma.$executeRaw`
+      ALTER TABLE \`users\`
+      ADD COLUMN IF NOT EXISTS \`avatar\` SMALLINT NULL DEFAULT NULL
+    `;
+
+    await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS \`audit_logs\` (
         \`id\`          INT NOT NULL AUTO_INCREMENT,
         \`user_id\`     INT NULL,
