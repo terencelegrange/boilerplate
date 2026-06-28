@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 
 describe("infrastructure", () => {
   it("connects to the test database", async () => {
-    const [{ v }] = await prisma.$queryRaw<{ v: number }[]>`SELECT 1 AS v`;
-    expect(v).toBe(1);
+    const [{ v }] = await prisma.$queryRaw<{ v: bigint }[]>`SELECT 1 AS v`;
+    expect(Number(v)).toBe(1);
   });
 
   it("feature flags were seeded by beforeEach", async () => {
