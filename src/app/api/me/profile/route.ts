@@ -9,8 +9,8 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = parseInt(session.sub, 10);
-  const rows = await prisma.$queryRaw<{ name: string | null; email: string; avatar: number | null }[]>`
-    SELECT name, email, avatar FROM users WHERE id = ${userId} LIMIT 1
+  const rows = await prisma.$queryRaw<{ id: number; name: string | null; email: string; avatar: number | null }[]>`
+    SELECT id, name, email, avatar FROM users WHERE id = ${userId} LIMIT 1
   `;
   if (!rows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(rows[0]);

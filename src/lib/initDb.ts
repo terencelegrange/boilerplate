@@ -25,10 +25,15 @@ export async function initDb() {
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     `;
 
-    await prisma.$executeRaw`
-      ALTER TABLE \`users\`
-      ADD COLUMN IF NOT EXISTS \`avatar\` SMALLINT NULL DEFAULT NULL
+    const avatarExists = await prisma.$queryRaw<{ cnt: bigint }[]>`
+      SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'avatar'
     `;
+    if (Number(avatarExists[0].cnt) === 0) {
+      await prisma.$executeRaw`
+        ALTER TABLE \`users\` ADD COLUMN \`avatar\` SMALLINT NULL DEFAULT NULL
+      `;
+    }
 
     await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS \`audit_logs\` (
