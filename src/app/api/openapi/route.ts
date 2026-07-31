@@ -87,7 +87,7 @@ const spec = {
       post: {
         tags: ["Auth"],
         summary: "Log out",
-        description: "Clears the session cookie and removes the current account from the `bp_remembered` multi-profile cookie (other remembered accounts on the browser are unaffected).",
+        description: "Clears the session cookie. The `bp_remembered` multi-profile cookie is left untouched, so the account picker keeps showing on next visit to `/login`.",
         responses: {
           200: { description: "Logged out" },
         },

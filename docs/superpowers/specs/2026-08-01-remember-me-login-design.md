@@ -7,7 +7,7 @@
 
 Two changes to the auth UI:
 1. Remove the redundant standalone Logout button from the sidebar bottom-left (the profile dropdown already has its own Logout item).
-2. Add a "Remember me" checkbox to login. When checked, the browser remembers the account as an avatar tile on future visits to `/login` — a Netflix-style "who's signing in" picker supporting multiple remembered profiles. Logging out removes only the current user's tile.
+2. Add a "Remember me" checkbox to login. When checked, the browser remembers the account as an avatar tile on future visits to `/login` — a Netflix-style "who's signing in" picker supporting multiple remembered profiles. Logging out does **not** remove the tile — that's the point of "remember me": the picker should keep showing on the next visit rather than reverting to the full form.
 
 Note: avatar display, click-to-randomize, and the `/profile` page already exist and are unaffected by this spec.
 
@@ -39,7 +39,7 @@ No secrets are stored — this is display/prefill data only, same trust level as
 
 If `rememberMe` is falsy, the cookie is left untouched (existing entries for that account, if any, are neither added nor removed).
 
-**Cleared (partially) by:** `POST /api/auth/logout` (`src/app/api/auth/logout/route.ts`). Reads `bp_remembered`, removes the entry matching the current session's user id, and re-sets the cookie with the filtered array (or clears it entirely if the array becomes empty). This is the "logout resets this feature" behavior, scoped to the one account that just logged out — other remembered profiles on the same browser are unaffected.
+**Not touched by logout:** `POST /api/auth/logout` only clears the `bp_token` session cookie. `bp_remembered` is left as-is — logging out ends the session but the account should still appear as a tile in the picker next time, otherwise "remember me" would have no effect after the very first logout. There is currently no UI to remove a remembered tile; it's only ever added to (capped at 5, most-recent-first) or replaced by a fresh login with updated name/avatar.
 
 ---
 
@@ -73,7 +73,7 @@ No automated test suite exists for this UI flow beyond the existing Vitest API r
 2. Reload `/login` — confirm the avatar tile appears instead of the full form.
 3. Click the tile, enter password, sign in — confirm it logs in successfully.
 4. Log in with a second account + Remember me — confirm both tiles now appear on `/login`.
-5. Log out from one account — confirm only that account's tile disappears, the other remains.
+5. Log out from one account — confirm its tile is still present on `/login` (logout does not clear `bp_remembered`).
 6. Click "Not you?" — confirm the full form appears and a fresh login without Remember me does not add a tile.
 7. Confirm the sidebar no longer shows a bottom-left Logout button, and the dropdown's Logout still works.
 
