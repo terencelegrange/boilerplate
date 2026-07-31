@@ -94,12 +94,12 @@ export default function LoginPage() {
 
         {showPicker && !selected && (
           <div>
-            <div className="grid grid-cols-3 gap-4 justify-items-center mb-6">
+            <div className="flex flex-wrap justify-center gap-4 mb-6">
               {profiles.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { setSelected(p); setError(""); }}
-                  className="flex flex-col items-center gap-2 group"
+                  className="flex flex-col items-center gap-2 group w-20"
                 >
                   <img
                     src={`/avatars/${getDisplayAvatar(p.avatar, p.id)}.png`}
