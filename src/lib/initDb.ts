@@ -103,9 +103,10 @@ export async function initDb() {
 
     // Seed default flags
     const defaultFlags = [
-      { key: "signup",    label: "Sign Up",   description: "Allow new users to register an account" },
-      { key: "dashboard", label: "Dashboard", description: "Show the dashboard page in the navigation" },
-      { key: "menu",      label: "Navigation Menu", description: "Show navigation links in the sidebar" },
+      { key: "signup",      label: "Sign Up",   description: "Allow new users to register an account" },
+      { key: "dashboard",   label: "Dashboard", description: "Show the dashboard page in the navigation" },
+      { key: "menu",        label: "Navigation Menu", description: "Show navigation links in the sidebar" },
+      { key: "remember_me", label: "Remember Me", description: "Allow users to stay recognized on this browser via the login account picker" },
     ];
     for (const f of defaultFlags) {
       await prisma.$executeRaw`

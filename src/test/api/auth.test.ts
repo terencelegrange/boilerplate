@@ -21,6 +21,31 @@ describe("POST /api/auth/login", () => {
     expect(res.headers.get("set-cookie")).toContain("bp_token=");
   });
 
+  it("sets bp_remembered cookie when rememberMe is true", async () => {
+    const user = await makeUser({ status: "approved" });
+    const req = makeRequest("POST", "/api/auth/login", {
+      email: user.email,
+      password: user.password,
+      rememberMe: true,
+    });
+    const res = await login(req as any);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toContain("bp_remembered=");
+  });
+
+  it("does not set bp_remembered when the remember_me flag is disabled", async () => {
+    await prisma.$executeRaw`UPDATE feature_flags SET enabled = 0 WHERE \`key\` = 'remember_me'`;
+    const user = await makeUser({ status: "approved" });
+    const req = makeRequest("POST", "/api/auth/login", {
+      email: user.email,
+      password: user.password,
+      rememberMe: true,
+    });
+    const res = await login(req as any);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).not.toContain("bp_remembered=");
+  });
+
   it("returns 401 for a wrong password", async () => {
     const user = await makeUser({ status: "approved" });
     const req = makeRequest("POST", "/api/auth/login", {

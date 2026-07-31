@@ -31,11 +31,12 @@ beforeEach(async () => {
   await prisma.$executeRaw`TRUNCATE TABLE changelog`;
   await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 1`;
 
-  // Re-seed the three default feature flags
+  // Re-seed the default feature flags (keep in sync with initDb.ts's defaultFlags)
   await prisma.$executeRaw`
     INSERT INTO feature_flags (\`key\`, enabled, label, description) VALUES
-    ('signup',    1, 'Sign Up',          'Allow new users to register an account'),
-    ('dashboard', 1, 'Dashboard',        'Show the dashboard page in the navigation'),
-    ('menu',      1, 'Navigation Menu',  'Show navigation links in the sidebar')
+    ('signup',      1, 'Sign Up',          'Allow new users to register an account'),
+    ('dashboard',   1, 'Dashboard',        'Show the dashboard page in the navigation'),
+    ('menu',        1, 'Navigation Menu',  'Show navigation links in the sidebar'),
+    ('remember_me', 1, 'Remember Me',     'Allow users to stay recognized on this browser via the login account picker')
   `;
 });

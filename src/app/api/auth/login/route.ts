@@ -4,6 +4,7 @@ import { initDb, verifyPassword } from "@/lib/initDb";
 import { prisma } from "@/lib/prisma";
 import { signToken, COOKIE, THEME_COOKIE, REMEMBERED_COOKIE, RememberedProfile, parseRemembered } from "@/lib/auth";
 import { auditLog, getIp } from "@/lib/audit";
+import { isFlagEnabled } from "@/lib/flags";
 
 interface UserRow {
   id: number; email: string; password_hash: string;
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set(COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
   res.cookies.set(THEME_COOKIE, user.theme, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
 
-  if (rememberMe) {
+  if (rememberMe && (await isFlagEnabled("remember_me"))) {
     const jar = await cookies();
     const existing = parseRemembered(jar.get(REMEMBERED_COOKIE)?.value);
     const profile: RememberedProfile = { id: user.id, email: user.email, name: user.name, avatar: user.avatar };

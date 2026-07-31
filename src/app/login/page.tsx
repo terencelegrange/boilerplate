@@ -36,11 +36,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMeEnabled, setRememberMeEnabled] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setProfiles(readRemembered());
+    fetch("/api/feature-flags")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: Record<string, { enabled: boolean }> | null) => {
+        if (data && "remember_me" in data) setRememberMeEnabled(data.remember_me.enabled);
+      })
+      .catch(() => {});
   }, []);
 
   async function submitLogin(loginEmail: string, loginPassword: string, remember: boolean) {
@@ -75,7 +82,7 @@ export default function LoginPage() {
     submitLogin(selected.email, password, true);
   }
 
-  const showPicker = profiles.length > 0 && !showFullForm;
+  const showPicker = rememberMeEnabled && profiles.length > 0 && !showFullForm;
 
   return (
     <div className="min-h-full flex items-center justify-center px-4 bg-gray-50 dark:bg-slate-950">
@@ -169,11 +176,13 @@ export default function LoginPage() {
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                     className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
                 </div>
-                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400 select-none">
-                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-gray-300 dark:border-slate-700 text-emerald-500 focus:ring-emerald-500" />
-                  Remember me
-                </label>
+                {rememberMeEnabled && (
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400 select-none">
+                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded border-gray-300 dark:border-slate-700 text-emerald-500 focus:ring-emerald-500" />
+                    Remember me
+                  </label>
+                )}
                 <button type="submit" disabled={loading}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition mt-2">
                   {loading ? "Signing in…" : "Sign in"}
@@ -185,7 +194,7 @@ export default function LoginPage() {
               Don&apos;t have an account?{" "}
               <Link href="/signup" className="text-emerald-500 hover:text-emerald-400 transition">Request access</Link>
             </p>
-            {profiles.length > 0 && showFullForm && (
+            {rememberMeEnabled && profiles.length > 0 && showFullForm && (
               <p className="text-center text-sm text-gray-500 dark:text-slate-500 mt-2">
                 <button onClick={() => setShowFullForm(false)} className="text-emerald-500 hover:text-emerald-400 transition">
                   Back to profiles

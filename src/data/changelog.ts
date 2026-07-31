@@ -9,6 +9,7 @@
  * Format: { date: "YYYY-MM-DD", description: "Short description of the change" }
  */
 export const CHANGELOG: { date: string; description: string }[] = [
+  { date: "2026-08-01", description: "Add remember_me feature flag to enable/disable the login account picker and Remember me checkbox" },
   { date: "2026-08-01", description: "Add localisation preferences (language, timezone, country, currency) to the profile page" },
   { date: "2026-08-01", description: "Add GET /api/health endpoint checking server, database, and expected table presence" },
   { date: "2026-08-01", description: "Add Remember me / multi-profile login picker and remove redundant sidebar logout button" },

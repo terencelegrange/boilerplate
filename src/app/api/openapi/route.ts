@@ -57,7 +57,7 @@ const spec = {
       post: {
         tags: ["Auth"],
         summary: "Log in",
-        description: "Authenticates a user and sets `bp_token` + `bp_theme` cookies. If `rememberMe` is true, also adds the account to the `bp_remembered` multi-profile cookie used by the login page's account picker.",
+        description: "Authenticates a user and sets `bp_token` + `bp_theme` cookies. If `rememberMe` is true and the `remember_me` feature flag is enabled, also adds the account to the `bp_remembered` multi-profile cookie used by the login page's account picker.",
         security: [],
         requestBody: {
           required: true,

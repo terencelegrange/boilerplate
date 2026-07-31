@@ -14,7 +14,7 @@ describe("initDb", () => {
     const [{ cnt }] = await prisma.$queryRaw<{ cnt: bigint }[]>`
       SELECT COUNT(*) AS cnt FROM feature_flags
     `;
-    expect(Number(cnt)).toBe(3);
+    expect(Number(cnt)).toBe(4);
   });
 });
 
