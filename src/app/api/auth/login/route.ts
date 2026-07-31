@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initDb, verifyPassword } from "@/lib/initDb";
 import { prisma } from "@/lib/prisma";
-import { signToken, COOKIE, THEME_COOKIE } from "@/lib/auth";
+import { signToken, COOKIE, THEME_COOKIE, REMEMBERED_COOKIE, RememberedProfile, parseRemembered } from "@/lib/auth";
 import { auditLog, getIp } from "@/lib/audit";
 
 interface UserRow {
   id: number; email: string; password_hash: string;
-  role: string; status: string; theme: string; name: string | null;
+  role: string; status: string; theme: string; name: string | null; avatar: number | null;
 }
 
 export async function POST(req: NextRequest) {
   await initDb();
-  const { email, password } = await req.json();
+  const { email, password, rememberMe } = await req.json();
 
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
   const rows = await prisma.$queryRaw<UserRow[]>`
-    SELECT id, email, password_hash, role, status, theme, name FROM users WHERE email = ${email} LIMIT 1
+    SELECT id, email, password_hash, role, status, theme, name, avatar FROM users WHERE email = ${email} LIMIT 1
   `;
   const user = rows[0] ?? null;
 
@@ -41,5 +41,13 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
   res.cookies.set(THEME_COOKIE, user.theme, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
+
+  if (rememberMe) {
+    const existing = parseRemembered(req.cookies.get(REMEMBERED_COOKIE)?.value);
+    const profile: RememberedProfile = { id: user.id, email: user.email, name: user.name, avatar: user.avatar };
+    const next = [profile, ...existing.filter((p) => p.id !== user.id)].slice(0, 5);
+    res.cookies.set(REMEMBERED_COOKIE, JSON.stringify(next), { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  }
+
   return res;
 }

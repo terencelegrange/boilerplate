@@ -57,7 +57,7 @@ const spec = {
       post: {
         tags: ["Auth"],
         summary: "Log in",
-        description: "Authenticates a user and sets `bp_token` + `bp_theme` cookies.",
+        description: "Authenticates a user and sets `bp_token` + `bp_theme` cookies. If `rememberMe` is true, also adds the account to the `bp_remembered` multi-profile cookie used by the login page's account picker.",
         security: [],
         requestBody: {
           required: true,
@@ -67,8 +67,9 @@ const spec = {
                 type: "object",
                 required: ["email", "password"],
                 properties: {
-                  email:    { type: "string", format: "email" },
-                  password: { type: "string" },
+                  email:      { type: "string", format: "email" },
+                  password:   { type: "string" },
+                  rememberMe: { type: "boolean", description: "Adds this account to the remembered-profiles cookie" },
                 },
               },
             },
@@ -86,7 +87,7 @@ const spec = {
       post: {
         tags: ["Auth"],
         summary: "Log out",
-        description: "Clears the session cookie.",
+        description: "Clears the session cookie and removes the current account from the `bp_remembered` multi-profile cookie (other remembered accounts on the browser are unaffected).",
         responses: {
           200: { description: "Logged out" },
         },

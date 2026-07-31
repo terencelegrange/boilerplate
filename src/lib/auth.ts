@@ -5,6 +5,28 @@ import { prisma } from "./prisma";
 
 export const COOKIE = "bp_token";
 export const THEME_COOKIE = "bp_theme";
+export const REMEMBERED_COOKIE = "bp_remembered";
+
+export interface RememberedProfile {
+  id: number;
+  email: string;
+  name: string | null;
+  avatar: number | null;
+}
+
+export function parseRemembered(raw: string | undefined): RememberedProfile[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (p): p is RememberedProfile =>
+        p && typeof p.id === "number" && typeof p.email === "string"
+    );
+  } catch {
+    return [];
+  }
+}
 
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "fallback-secret-change-me"
