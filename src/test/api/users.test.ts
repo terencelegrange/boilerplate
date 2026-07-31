@@ -1,6 +1,6 @@
 // src/test/api/users.test.ts
 import { describe, it, expect } from "vitest";
-import { GET as getUsers } from "@/app/api/users/route";
+import { GET as getUsers, POST as createUser } from "@/app/api/users/route";
 import { PATCH as patchUser, DELETE as deleteUser } from "@/app/api/users/[id]/route";
 import { makeUser, makeAdmin, makeRequest, adminRequest, userRequest, makeToken, mockAuth } from "../helpers";
 import { prisma } from "@/lib/prisma";
@@ -29,6 +29,55 @@ describe("GET /api/users", () => {
   it("returns 403 when unauthenticated", async () => {
     // beforeEach resets auth to mockNoAuth
     const res = await getUsers();
+    expect(res.status).toBe(403);
+  });
+});
+
+// --- POST /api/users ------------------------------------------------------------
+describe("POST /api/users", () => {
+  it("creates an approved user as admin", async () => {
+    const req = await adminRequest("/api/users", "POST", {
+      email: "newuser@test.com", name: "New User", password: "password123", role: "user",
+    });
+    const res = await createUser(req as any);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+
+    const [row] = await prisma.$queryRaw<{ email: string; status: string; role: string }[]>`
+      SELECT email, status, role FROM users WHERE id = ${body.id}
+    `;
+    expect(row.email).toBe("newuser@test.com");
+    expect(row.status).toBe("approved");
+    expect(row.role).toBe("user");
+  });
+
+  it("defaults role to user when omitted", async () => {
+    const req = await adminRequest("/api/users", "POST", {
+      email: "defaultrole@test.com", password: "password123",
+    });
+    const res = await createUser(req as any);
+    const body = await res.json();
+    const [row] = await prisma.$queryRaw<{ role: string }[]>`SELECT role FROM users WHERE id = ${body.id}`;
+    expect(row.role).toBe("user");
+  });
+
+  it("returns 400 for a short password", async () => {
+    const req = await adminRequest("/api/users", "POST", { email: "short@test.com", password: "short" });
+    const res = await createUser(req as any);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 409 for a duplicate email", async () => {
+    const existing = await makeUser();
+    const req = await adminRequest("/api/users", "POST", { email: existing.email, password: "password123" });
+    const res = await createUser(req as any);
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 403 for a non-admin user", async () => {
+    const { req } = await userRequest("/api/users", "POST", { email: "x@test.com", password: "password123" });
+    const res = await createUser(req as any);
     expect(res.status).toBe(403);
   });
 });

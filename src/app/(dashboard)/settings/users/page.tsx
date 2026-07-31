@@ -19,6 +19,14 @@ export default function UsersPage() {
   const [filter, setFilter] = useState<"all" | "pending">("pending");
   const [busy, setBusy] = useState<number | null>(null);
 
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState("user");
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
     const r = await fetch("/api/users");
@@ -26,6 +34,28 @@ export default function UsersPage() {
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
+
+  async function handleAddUser(e: React.FormEvent) {
+    e.preventDefault();
+    setAddError(null);
+    setAddSaving(true);
+    try {
+      const r = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newEmail, name: newName, password: newPassword, role: newRole }),
+      });
+      const data = await r.json();
+      if (!r.ok) { setAddError(data.error ?? "Failed to add user"); return; }
+      setNewEmail(""); setNewName(""); setNewPassword(""); setNewRole("user");
+      setShowAddForm(false);
+      await load();
+    } catch {
+      setAddError("Network error - please try again");
+    } finally {
+      setAddSaving(false);
+    }
+  }
 
   async function update(id: number, patch: Record<string, string>) {
     setBusy(id);
@@ -45,12 +75,59 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Manage user accounts, roles, and approval status</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Manage user accounts, roles, and approval status</p>
+        </div>
+        <button onClick={() => setShowAddForm((v) => !v)}
+          className="px-4 py-2 text-sm rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition flex-shrink-0">
+          {showAddForm ? "Cancel" : "+ Add User"}
+        </button>
       </div>
 
       <div className="space-y-5">
+        {showAddForm && (
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Add User</h2>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-5">New users are created with approved status and can sign in immediately</p>
+            <form onSubmit={handleAddUser} className="space-y-4 max-w-md">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Email</label>
+                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required
+                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
+                <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Password</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8}
+                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Role</label>
+                <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                  <option value="user">user</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+              {addError && (
+                <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{addError}</p>
+              )}
+              <div className="flex justify-end">
+                <button type="submit" disabled={addSaving}
+                  className="px-4 py-2 text-sm rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50 transition">
+                  {addSaving ? "Adding..." : "Add User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {pending.length > 0 && (
           <div className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-5 py-3">
             <svg className="w-4 h-4 text-yellow-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -105,8 +182,7 @@ export default function UsersPage() {
                   <td className="px-5 py-3">
                     <select value={u.role} disabled={busy === u.id} onChange={(e) => update(u.id, { role: e.target.value })}
                       className="bg-transparent border border-gray-200 dark:border-slate-700 rounded px-2 py-1 text-xs text-gray-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                      <option value="viewer">viewer</option>
-                      <option value="editor">editor</option>
+                      <option value="user">user</option>
                       <option value="admin">admin</option>
                     </select>
                   </td>

@@ -263,6 +263,35 @@ const spec = {
           403: { description: "Admin role required" },
         },
       },
+      post: {
+        tags: ["Users"],
+        summary: "Create a user",
+        description: "Directly creates a new user with `approved` status (bypasses the pending-approval signup flow). Admin only.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "password"],
+                properties: {
+                  email:    { type: "string", format: "email" },
+                  name:     { type: "string", nullable: true },
+                  password: { type: "string", description: "Minimum 8 characters" },
+                  role:     { type: "string", enum: ["user", "admin"], default: "user" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Created", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" }, id: { type: "integer" } } } } } },
+          400: { description: "Validation error" },
+          401: { description: "Not authenticated" },
+          403: { description: "Admin role required" },
+          409: { description: "Email already in use" },
+        },
+      },
     },
     "/users/{id}": {
       patch: {
