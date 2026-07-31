@@ -78,6 +78,38 @@ describe("PATCH /api/me/profile — identity fields", () => {
   });
 });
 
+// ─── PATCH /api/me/profile — localisation ────────────────────
+describe("PATCH /api/me/profile — localisation fields", () => {
+  it("saves language, timezone, country, and currency", async () => {
+    const user = await makeUser();
+    const token = await makeToken({ sub: String(user.id), email: user.email, role: "user", name: user.name });
+    mockAuth(token);
+    const req = makeRequest("PATCH", "/api/me/profile", {
+      language: "en", timezone: "Australia/Sydney", country: "AU", currency: "AUD",
+    });
+    const res = await patchProfile(req as any);
+    expect(res.status).toBe(200);
+
+    const [row] = await prisma.$queryRaw<{ language: string; timezone: string; country: string; currency: string }[]>`
+      SELECT language, timezone, country, currency FROM users WHERE id = ${user.id}
+    `;
+    expect(row.language).toBe("en");
+    expect(row.timezone).toBe("Australia/Sydney");
+    expect(row.country).toBe("AU");
+    expect(row.currency).toBe("AUD");
+  });
+
+  it("returns localisation fields from GET /api/me/profile", async () => {
+    const user = await makeUser();
+    const token = await makeToken({ sub: String(user.id), email: user.email, role: "user", name: user.name });
+    mockAuth(token);
+    await patchProfile(makeRequest("PATCH", "/api/me/profile", { language: "fr" }) as any);
+    const res = await getProfile();
+    const body = await res.json();
+    expect(body.language).toBe("fr");
+  });
+});
+
 // ─── PATCH /api/me/profile — password ────────────────────────
 describe("PATCH /api/me/profile — password change", () => {
   it("changes the password when current password is correct", async () => {

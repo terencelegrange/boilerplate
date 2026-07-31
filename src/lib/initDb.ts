@@ -51,6 +51,10 @@ export async function initDb() {
     `;
 
     await ensureColumn("users", "avatar", "\`avatar\` SMALLINT NULL DEFAULT NULL");
+    await ensureColumn("users", "language", "\`language\` VARCHAR(10) NULL DEFAULT NULL");
+    await ensureColumn("users", "timezone", "\`timezone\` VARCHAR(50) NULL DEFAULT NULL");
+    await ensureColumn("users", "country", "\`country\` VARCHAR(2) NULL DEFAULT NULL");
+    await ensureColumn("users", "currency", "\`currency\` VARCHAR(3) NULL DEFAULT NULL");
 
     await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS \`audit_logs\` (

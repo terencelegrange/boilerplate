@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { LANGUAGES, COUNTRIES, CURRENCIES, getTimezones } from "@/data/localisation";
 
 function getDisplayAvatar(av: number | null, uid: number | null): number {
   if (av !== null && av >= 1 && av <= 127) return av;
@@ -27,6 +28,16 @@ export default function ProfilePage() {
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState(false);
 
+  // Localisation form
+  const [language, setLanguage] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [country, setCountry] = useState("");
+  const [currency, setCurrency] = useState("");
+  const [locSaving, setLocSaving] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
+  const [locSuccess, setLocSuccess] = useState(false);
+  const timezones = useMemo(() => getTimezones(), []);
+
   useEffect(() => {
     const token = document.cookie.split("; ").find((c) => c.startsWith("bp_token="))?.split("=")[1];
     if (token) {
@@ -43,6 +54,10 @@ export default function ProfilePage() {
         setAvatar(data.avatar ?? null);
         setName(data.name ?? "");
         setEmail(data.email ?? "");
+        setLanguage(data.language ?? "");
+        setTimezone(data.timezone ?? "");
+        setCountry(data.country ?? "");
+        setCurrency(data.currency ?? "");
       })
       .catch(() => {});
   }, []);
@@ -105,7 +120,29 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleLocalisationSave(e: React.FormEvent) {
+    e.preventDefault();
+    setLocError(null);
+    setLocSaving(true);
+    try {
+      const r = await fetch("/api/me/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, timezone, country, currency }),
+      });
+      const data = await r.json();
+      if (!r.ok) { setLocError(data.error ?? "Failed to save"); return; }
+      setLocSuccess(true);
+      setTimeout(() => setLocSuccess(false), 3000);
+    } catch {
+      setLocError("Network error - please try again");
+    } finally {
+      setLocSaving(false);
+    }
+  }
+
   const displayAvatar = getDisplayAvatar(avatar, userId);
+  const selectClass = "w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50";
 
   return (
     <div>
@@ -170,6 +207,60 @@ export default function ProfilePage() {
               <button type="submit" disabled={identitySaving}
                 className="px-4 py-2 text-sm rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50 transition">
                 {identitySaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Localisation card */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-6">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Localisation</h2>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mb-5">Your language, timezone, region, and currency preferences</p>
+
+          <form onSubmit={handleLocalisationSave} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Language</label>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className={selectClass}>
+                <option value="">Not set</option>
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Timezone</label>
+              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={selectClass}>
+                <option value="">Not set</option>
+                {timezones.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Country / Location</label>
+              <select value={country} onChange={(e) => setCountry(e.target.value)} className={selectClass}>
+                <option value="">Not set</option>
+                {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Currency</label>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={selectClass}>
+                <option value="">Not set</option>
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.label}</option>)}
+              </select>
+            </div>
+
+            {locError && (
+              <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{locError}</p>
+            )}
+            {locSuccess && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">Localisation preferences saved</p>
+            )}
+
+            <div className="flex justify-end">
+              <button type="submit" disabled={locSaving}
+                className="px-4 py-2 text-sm rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50 transition">
+                {locSaving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>

@@ -9,8 +9,11 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = parseInt(session.sub, 10);
-  const rows = await prisma.$queryRaw<{ id: number; name: string | null; email: string; avatar: number | null }[]>`
-    SELECT id, name, email, avatar FROM users WHERE id = ${userId} LIMIT 1
+  const rows = await prisma.$queryRaw<{
+    id: number; name: string | null; email: string; avatar: number | null;
+    language: string | null; timezone: string | null; country: string | null; currency: string | null;
+  }[]>`
+    SELECT id, name, email, avatar, language, timezone, country, currency FROM users WHERE id = ${userId} LIMIT 1
   `;
   if (!rows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(rows[0]);
@@ -21,7 +24,7 @@ export async function PATCH(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = parseInt(session.sub, 10);
-  const { name, email, currentPassword, newPassword, avatar } = await req.json();
+  const { name, email, currentPassword, newPassword, avatar, language, timezone, country, currency } = await req.json();
 
   // If changing password, verify current one first
   if (newPassword) {
@@ -52,6 +55,11 @@ export async function PATCH(req: NextRequest) {
     updates.push("avatar = ?");
     values.push(avatar);
   }
+
+  if (language !== undefined) { updates.push("language = ?"); values.push(language || null); }
+  if (timezone !== undefined) { updates.push("timezone = ?"); values.push(timezone || null); }
+  if (country !== undefined) { updates.push("country = ?"); values.push(country || null); }
+  if (currency !== undefined) { updates.push("currency = ?"); values.push(currency || null); }
 
   if (updates.length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });

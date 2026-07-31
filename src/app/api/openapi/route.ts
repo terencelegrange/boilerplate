@@ -147,9 +147,9 @@ const spec = {
       get: {
         tags: ["Me"],
         summary: "Get own profile",
-        description: "Returns the current user's name, email, and avatar number (1–127; null means no avatar saved — caller should derive a default).",
+        description: "Returns the current user's name, email, avatar number (1–127; null means no avatar saved — caller should derive a default), and localisation preferences.",
         responses: {
-          200: { description: "Profile data", content: { "application/json": { schema: { type: "object", properties: { name: { type: "string", nullable: true }, email: { type: "string" }, avatar: { type: "integer", nullable: true, minimum: 1, maximum: 127 } } } } } },
+          200: { description: "Profile data", content: { "application/json": { schema: { type: "object", properties: { name: { type: "string", nullable: true }, email: { type: "string" }, avatar: { type: "integer", nullable: true, minimum: 1, maximum: 127 }, language: { type: "string", nullable: true, description: "ISO 639-1 code, e.g. 'en'" }, timezone: { type: "string", nullable: true, description: "IANA timezone, e.g. 'Australia/Sydney'" }, country: { type: "string", nullable: true, description: "ISO 3166-1 alpha-2 code, e.g. 'AU'" }, currency: { type: "string", nullable: true, description: "ISO 4217 code, e.g. 'AUD'" } } } } } },
           401: { description: "Not authenticated" },
           404: { description: "User not found" },
         },
@@ -157,7 +157,7 @@ const spec = {
       patch: {
         tags: ["Me"],
         summary: "Update own profile",
-        description: "Update name, email, and/or password for the currently logged-in user. Password change requires `currentPassword`.",
+        description: "Update name, email, password, avatar, and/or localisation preferences for the currently logged-in user. Password change requires `currentPassword`.",
         requestBody: {
           required: true,
           content: {
@@ -170,6 +170,10 @@ const spec = {
                   currentPassword: { type: "string", description: "Required when changing password" },
                   newPassword:     { type: "string" },
                   avatar:          { type: "integer", minimum: 1, maximum: 127, description: "Avatar number (1–127); values outside this range are ignored" },
+                  language:        { type: "string", nullable: true, description: "ISO 639-1 code, e.g. 'en'" },
+                  timezone:        { type: "string", nullable: true, description: "IANA timezone, e.g. 'Australia/Sydney'" },
+                  country:         { type: "string", nullable: true, description: "ISO 3166-1 alpha-2 code, e.g. 'AU'" },
+                  currency:        { type: "string", nullable: true, description: "ISO 4217 code, e.g. 'AUD'" },
                 },
               },
             },
