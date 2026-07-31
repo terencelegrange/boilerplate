@@ -5,6 +5,31 @@ import { DEFAULT_ROLE_PERMISSIONS } from "@/data/nav";
 
 let initialized = false;
 
+/** Tables initDb() is expected to have created - used by the healthcheck to confirm schema is in place. */
+export const EXPECTED_TABLES = [
+  "users",
+  "audit_logs",
+  "feature_flags",
+  "changelog",
+  "role_permissions",
+  "api_keys",
+] as const;
+
+/**
+ * Idempotent column migration: adds `columnDdl` to `table` only if it doesn't
+ * already exist. This is the project's migration mechanism in place of
+ * Prisma Migrate (see CLAUDE.md) - safe to call on every boot.
+ */
+async function ensureColumn(table: string, column: string, columnDdl: string) {
+  const rows = await prisma.$queryRaw<{ cnt: bigint }[]>`
+    SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND COLUMN_NAME = ${column}
+  `;
+  if (Number(rows[0].cnt) === 0) {
+    await prisma.$executeRawUnsafe(`ALTER TABLE \`${table}\` ADD COLUMN ${columnDdl}`);
+  }
+}
+
 export async function initDb() {
   if (initialized) return;
 
@@ -25,15 +50,7 @@ export async function initDb() {
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     `;
 
-    const avatarExists = await prisma.$queryRaw<{ cnt: bigint }[]>`
-      SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'avatar'
-    `;
-    if (Number(avatarExists[0].cnt) === 0) {
-      await prisma.$executeRaw`
-        ALTER TABLE \`users\` ADD COLUMN \`avatar\` SMALLINT NULL DEFAULT NULL
-      `;
-    }
+    await ensureColumn("users", "avatar", "\`avatar\` SMALLINT NULL DEFAULT NULL");
 
     await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS \`audit_logs\` (

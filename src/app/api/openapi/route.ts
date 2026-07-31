@@ -183,6 +183,41 @@ const spec = {
       },
     },
 
+    // ── Health ──────────────────────────────────────────────────────────
+    "/health": {
+      get: {
+        tags: ["Meta"],
+        summary: "Health check",
+        description: "Unauthenticated liveness/readiness check: verifies the server is responding, the database is reachable, and the expected core tables exist.",
+        security: [],
+        responses: {
+          200: {
+            description: "All checks passed",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    status:    { type: "string", enum: ["ok", "error"] },
+                    timestamp: { type: "string", format: "date-time" },
+                    checks: {
+                      type: "object",
+                      properties: {
+                        server:   { type: "object", properties: { status: { type: "string" } } },
+                        database: { type: "object", properties: { status: { type: "string" }, latencyMs: { type: "integer" } } },
+                        tables:   { type: "object", properties: { status: { type: "string" }, checked: { type: "integer" } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          503: { description: "One or more checks failed (database unreachable or tables missing)" },
+        },
+      },
+    },
+
     // ── Dashboard ───────────────────────────────────────────────────────
     "/dashboard": {
       get: {
