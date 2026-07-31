@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [flags, setFlags] = useState<Record<string, boolean>>({ menu: true, dashboard: true, signup: true });
   const [allowedNavKeys, setAllowedNavKeys] = useState<string[]>(["dashboard", "settings"]);
+  const [activeEnv, setActiveEnv] = useState("dev");
 
   useEffect(() => {
     fetch("/api/feature-flags")
@@ -35,6 +36,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const theme = document.cookie.split("; ").find((c) => c.startsWith("bp_theme="))?.split("=")[1];
     setIsDark(theme !== "light");
 
+    const env = document.cookie.split("; ").find((c) => c.startsWith("omni_env="))?.split("=")[1] || "dev";
+    setActiveEnv(env);
+
     fetch("/api/me/profile")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
@@ -45,6 +49,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       .catch(() => {});
   }, []);
+
+  function handleEnvChange(env: string) {
+    document.cookie = `omni_env=${env}; path=/; max-age=31536000; SameSite=Lax`;
+    setActiveEnv(env);
+    window.location.reload();
+  }
+
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -145,6 +156,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-gray-50/80 dark:bg-slate-950/80 backdrop-blur border-b border-gray-200 dark:border-slate-800 px-6 py-3 flex items-center justify-end gap-2">
+          {/* Environment selector */}
+          <div className="flex items-center gap-1 bg-gray-150 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-xl p-1 mr-2 shadow-inner">
+            {[
+              { key: "dev", label: "Dev" },
+              { key: "tst", label: "Test" },
+              { key: "stg", label: "Staging" },
+              { key: "prd", label: "Prod" },
+            ].map((e) => (
+              <button
+                key={e.key}
+                onClick={() => handleEnvChange(e.key)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                  activeEnv === e.key
+                    ? "bg-emerald-500 text-white shadow-sm"
+                    : "text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800/60"
+                }`}
+              >
+                {e.label}
+              </button>
+            ))}
+          </div>
+
           {/* Theme toggle */}
           <button onClick={toggleTheme} title={isDark ? "Switch to light mode" : "Switch to dark mode"}
             className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition">

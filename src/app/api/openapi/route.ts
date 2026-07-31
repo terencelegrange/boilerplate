@@ -382,6 +382,167 @@ const spec = {
       },
     },
 
+    // ── Sites ───────────────────────────────────────────────────────────
+    "/sites": {
+      get: {
+        tags: ["Sites"],
+        summary: "List all monitored sites",
+        description: "Returns sites filtered by environment (dev, tst, stg, prd).",
+        parameters: [
+          { name: "env", in: "query", description: "Target environment to filter by", required: false, schema: { type: "string", default: "dev" } }
+        ],
+        responses: {
+          200: { description: "List of sites" },
+          401: { description: "Not authenticated" }
+        }
+      },
+      post: {
+        tags: ["Sites"],
+        summary: "Create a new monitored site",
+        description: "Creates a site to be monitored in the specified environment. Admin only.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "url", "health_check_url", "environment"],
+                properties: {
+                  name: { type: "string" },
+                  url: { type: "string" },
+                  health_check_url: { type: "string" },
+                  environment: { type: "string", enum: ["dev", "tst", "stg", "prd"] }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: "Site created" },
+          401: { description: "Not authenticated" },
+          403: { description: "Forbidden - Admin only" }
+        }
+      }
+    },
+    "/sites/{id}": {
+      patch: {
+        tags: ["Sites"],
+        summary: "Update site configuration",
+        description: "Modifies site monitoring parameters. Admin only.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "integer" } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  url: { type: "string" },
+                  health_check_url: { type: "string" },
+                  environment: { type: "string", enum: ["dev", "tst", "stg", "prd"] }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: "Site updated" },
+          401: { description: "Not authenticated" },
+          403: { description: "Forbidden - Admin only" },
+          404: { description: "Site not found" }
+        }
+      },
+      delete: {
+        tags: ["Sites"],
+        summary: "Delete monitored site",
+        description: "Deletes a site and all its health check history. Admin only.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "integer" } }
+        ],
+        responses: {
+          200: { description: "Site deleted" },
+          401: { description: "Not authenticated" },
+          403: { description: "Forbidden - Admin only" },
+          404: { description: "Site not found" }
+        }
+      }
+    },
+    "/health-checks": {
+      get: {
+        tags: ["Health Checks"],
+        summary: "List sites with recent health check history",
+        description: "Returns sites in an environment along with their last 5 execution logs.",
+        parameters: [
+          { name: "env", in: "query", description: "Target environment to filter by", required: false, schema: { type: "string", default: "dev" } }
+        ],
+        responses: {
+          200: { description: "List of sites with their logs" },
+          401: { description: "Not authenticated" }
+        }
+      }
+    },
+    "/health-checks/run": {
+      post: {
+        tags: ["Health Checks"],
+        summary: "Execute health checks on-demand",
+        description: "Checks all sites in the environment or a specific site by siteId, stores results, and updates site status.",
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  siteId: { type: "integer", description: "Optionally specify single site ID to check" },
+                  env: { type: "string", description: "Optionally specify target environment to check all sites" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: "Checks executed successfully" },
+          401: { description: "Not authenticated" }
+        }
+      }
+    },
+    "/health-checks/report": {
+      post: {
+        tags: ["Health Checks"],
+        summary: "Report health check results from external agents",
+        description: "Allows external monitoring agents to report status results directly to the dashboard using an API Key. Requires editor or admin role.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["siteId", "status"],
+                properties: {
+                  siteId: { type: "integer", description: "The ID of the monitored site" },
+                  status: { type: "string", enum: ["up", "down"], description: "The reported status of the site" },
+                  statusCode: { type: "integer", description: "Optional HTTP status code returned by the health check" },
+                  latency: { type: "integer", description: "Optional latency measurement in milliseconds" },
+                  error: { type: "string", description: "Optional error message if the site was reported down" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: "Report recorded successfully" },
+          400: { description: "Invalid parameters" },
+          401: { description: "Not authenticated" },
+          403: { description: "Forbidden - Editor/Admin only" },
+          404: { description: "Site not found" }
+        }
+      }
+    },
+
+
     // ── OpenAPI ─────────────────────────────────────────────────────────
     "/openapi": {
       get: {

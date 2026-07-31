@@ -32,6 +32,14 @@ const TILES: { key: string; label: string; description: string; icon: string; hr
     href: "/settings/feature-flags",
   },
   {
+    key: "sites",
+    label: "Sites & Health Checks",
+    description: "Configure monitored sites and health check endpoints",
+    icon: "M5.25 5.25h13.5A1.5 1.5 0 0120.25 6.75v3A1.5 1.5 0 0118.75 11.25H5.25A1.5 1.5 0 013.75 9.75v-3A1.5 1.5 0 015.25 5.25zm0 8.25h13.5a1.5 1.5 0 011.5 1.5v3a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-3a1.5 1.5 0 011.5-1.5z",
+    href: "/settings/sites",
+  },
+
+  {
     key: "api-access",
     label: "API Access",
     description: "Manage API keys for programmatic access to the platform",
