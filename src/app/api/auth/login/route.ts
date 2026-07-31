@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { initDb, verifyPassword } from "@/lib/initDb";
 import { prisma } from "@/lib/prisma";
 import { signToken, COOKIE, THEME_COOKIE, REMEMBERED_COOKIE, RememberedProfile, parseRemembered } from "@/lib/auth";
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
   res.cookies.set(THEME_COOKIE, user.theme, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
 
   if (rememberMe) {
-    const existing = parseRemembered(req.cookies.get(REMEMBERED_COOKIE)?.value);
+    const jar = await cookies();
+    const existing = parseRemembered(jar.get(REMEMBERED_COOKIE)?.value);
     const profile: RememberedProfile = { id: user.id, email: user.email, name: user.name, avatar: user.avatar };
     const next = [profile, ...existing.filter((p) => p.id !== user.id)].slice(0, 5);
     res.cookies.set(REMEMBERED_COOKIE, JSON.stringify(next), { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
