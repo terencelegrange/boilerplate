@@ -187,6 +187,62 @@ const spec = {
       },
     },
 
+    // ── Crisis Banner ───────────────────────────────────────────────────
+    "/crisis-banner": {
+      get: {
+        tags: ["Meta"],
+        summary: "Get crisis banner state",
+        description: "Unauthenticated: returns the configured banner plus a computed `active` flag (enabled AND today within the start/end date window). Used by every page, including login and signup.",
+        security: [],
+        responses: {
+          200: {
+            description: "Banner state",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message:   { type: "string" },
+                    startDate: { type: "string", format: "date", nullable: true },
+                    endDate:   { type: "string", format: "date", nullable: true },
+                    enabled:   { type: "boolean" },
+                    active:    { type: "boolean", description: "Whether the banner should currently be displayed" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      patch: {
+        tags: ["Meta"],
+        summary: "Update crisis banner",
+        description: "Update the banner message, date window, and/or enabled flag. Admin only.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message:   { type: "string" },
+                  startDate: { type: "string", format: "date", nullable: true },
+                  endDate:   { type: "string", format: "date", nullable: true },
+                  enabled:   { type: "boolean" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Updated" },
+          400: { description: "Nothing to update" },
+          401: { description: "Not authenticated" },
+          403: { description: "Admin role required" },
+        },
+      },
+    },
+
     // ── Health ──────────────────────────────────────────────────────────
     "/health": {
       get: {

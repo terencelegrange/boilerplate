@@ -13,6 +13,7 @@ export const EXPECTED_TABLES = [
   "changelog",
   "role_permissions",
   "api_keys",
+  "crisis_banner",
 ] as const;
 
 /**
@@ -140,6 +141,21 @@ export async function initDb() {
         KEY \`api_keys_created_by\` (\`created_by\`),
         CONSTRAINT \`api_keys_created_by_fk\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\` (\`id\`) ON DELETE SET NULL
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS \`crisis_banner\` (
+        \`id\`         TINYINT NOT NULL,
+        \`message\`    TEXT NOT NULL,
+        \`start_date\` DATE NULL,
+        \`end_date\`   DATE NULL,
+        \`enabled\`    TINYINT(1) NOT NULL DEFAULT 0,
+        \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (\`id\`)
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+    await prisma.$executeRaw`
+      INSERT IGNORE INTO crisis_banner (id, message, enabled) VALUES (1, '', 0)
     `;
 
     // Seed default role permissions

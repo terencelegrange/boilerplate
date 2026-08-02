@@ -29,7 +29,11 @@ beforeEach(async () => {
   await prisma.$executeRaw`TRUNCATE TABLE users`;
   await prisma.$executeRaw`TRUNCATE TABLE feature_flags`;
   await prisma.$executeRaw`TRUNCATE TABLE changelog`;
+  await prisma.$executeRaw`TRUNCATE TABLE crisis_banner`;
   await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 1`;
+
+  // Re-seed the crisis banner singleton row (keep in sync with initDb.ts)
+  await prisma.$executeRaw`INSERT INTO crisis_banner (id, message, enabled) VALUES (1, '', 0)`;
 
   // Re-seed the default feature flags (keep in sync with initDb.ts's defaultFlags)
   await prisma.$executeRaw`
