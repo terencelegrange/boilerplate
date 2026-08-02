@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { auditLog, getIp } from "@/lib/audit";
+import { initDb } from "@/lib/initDb";
 
 interface BannerRow {
   message: string;
@@ -23,6 +24,7 @@ function isActive(enabled: boolean, startDate: string | null, endDate: string | 
 }
 
 export async function GET() {
+  await initDb();
   const rows = await prisma.$queryRaw<BannerRow[]>`
     SELECT message, start_date, end_date, enabled FROM crisis_banner WHERE id = 1 LIMIT 1
   `;
@@ -41,6 +43,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  await initDb();
   const session = await getSession();
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
