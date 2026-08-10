@@ -120,37 +120,6 @@ export async function initDb() {
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     `;
 
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS \`sites\` (
-        \`id\`               INT NOT NULL AUTO_INCREMENT,
-        \`name\`             VARCHAR(200) NOT NULL,
-        \`url\`              VARCHAR(500) NOT NULL,
-        \`health_check_url\` VARCHAR(500) NOT NULL,
-        \`environment\`      VARCHAR(20) NOT NULL,
-        \`status\`           VARCHAR(20) NOT NULL DEFAULT 'unknown',
-        \`last_checked\`     DATETIME(3) NULL DEFAULT NULL,
-        \`created_at\`       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        \`updated_at\`       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-        PRIMARY KEY (\`id\`)
-      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-    `;
-
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS \`health_check_logs\` (
-        \`id\`          INT NOT NULL AUTO_INCREMENT,
-        \`site_id\`     INT NOT NULL,
-        \`status\`      VARCHAR(20) NOT NULL,
-        \`status_code\` INT NULL DEFAULT NULL,
-        \`latency\`     INT NULL DEFAULT NULL,
-        \`error\`       TEXT NULL DEFAULT NULL,
-        \`created_at\`  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        PRIMARY KEY (\`id\`),
-        KEY \`health_check_logs_site_id_fk\` (\`site_id\`),
-        CONSTRAINT \`health_check_logs_site_id_fk\` FOREIGN KEY (\`site_id\`) REFERENCES \`sites\` (\`id\`) ON DELETE CASCADE
-      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-    `;
-
-
     // Seed default role permissions
     for (const [role, keys] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
       for (const nav_key of keys) {

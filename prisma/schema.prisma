@@ -36,31 +36,3 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-model Site {
-  id                Int              @id @default(autoincrement())
-  name              String           @db.VarChar(200)
-  url               String           @db.VarChar(500)
-  health_check_url  String           @db.VarChar(500)
-  environment       String           @db.VarChar(20) // "dev" | "tst" | "stg" | "prd"
-  status            String           @default("unknown") @db.VarChar(20)
-  last_checked      DateTime?
-  created_at        DateTime         @default(now())
-  updated_at        DateTime         @updatedAt
-  health_logs       HealthCheckLog[]
-
-  @@map("sites")
-}
-
-model HealthCheckLog {
-  id          Int      @id @default(autoincrement())
-  site_id     Int
-  site        Site     @relation(fields: [site_id], references: [id], onDelete: Cascade)
-  status      String   @db.VarChar(20)
-  status_code Int?
-  latency     Int?
-  error       String?  @db.Text
-  created_at  DateTime @default(now())
-
-  @@map("health_check_logs")
-}
-
