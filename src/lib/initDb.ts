@@ -120,6 +120,21 @@ export async function initDb() {
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     `;
 
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS \`device_tokens\` (
+        \`id\`         INT NOT NULL AUTO_INCREMENT,
+        \`user_id\`    INT NOT NULL,
+        \`token_hash\` VARCHAR(64) NOT NULL,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`last_used\`  DATETIME NULL,
+        \`expires_at\` DATETIME NOT NULL,
+        PRIMARY KEY (\`id\`),
+        UNIQUE KEY \`device_tokens_hash\` (\`token_hash\`),
+        KEY \`device_tokens_user_id\` (\`user_id\`),
+        CONSTRAINT \`device_tokens_user_id_fk\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+
     // Seed default role permissions
     for (const [role, keys] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
       for (const nav_key of keys) {

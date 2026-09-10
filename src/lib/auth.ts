@@ -1,7 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies, headers } from "next/headers";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { prisma } from "./prisma";
+
+const DEVICE_TOKEN_TTL_DAYS = 30;
 
 export const COOKIE = "bp_token";
 export const THEME_COOKIE = "bp_theme";
@@ -54,6 +56,26 @@ async function getSessionFromApiKey(rawKey: string): Promise<JwtPayload | null> 
   } catch {
     return null;
   }
+}
+
+export function hashDeviceToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+// Issues an opaque "trust this device" token so a remembered profile can
+// skip the password step. Only the sha256 hash is persisted.
+export async function createDeviceToken(userId: number): Promise<string> {
+  const raw = randomBytes(32).toString("hex");
+  // Compute the expiry as NOW() + INTERVAL in SQL, not a JS Date — the DB
+  // server's NOW()/CURRENT_TIMESTAMP() run in its local timezone, while a
+  // JS Date gets serialized as UTC, which would skew expires_at against
+  // the NOW() comparison used to check it by the server's UTC offset.
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO device_tokens (user_id, token_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL ${DEVICE_TOKEN_TTL_DAYS} DAY)`,
+    userId,
+    hashDeviceToken(raw)
+  );
+  return raw;
 }
 
 export async function getSession(): Promise<JwtPayload | null> {

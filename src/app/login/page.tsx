@@ -14,9 +14,11 @@ export default function LoginPage() {
   const [profiles, setProfiles] = useState<RememberedProfile[]>([]);
   const [view, setView] = useState<View>("form");
   const [activeProfile, setActiveProfile] = useState<RememberedProfile | null>(null);
+  const [silentLogin, setSilentLogin] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,22 +28,24 @@ export default function LoginPage() {
     setView(remembered.length > 0 ? "profiles" : "form");
   }, []);
 
-  async function performLogin(loginEmail: string, loginPassword: string) {
+  async function performLogin(loginEmail: string, loginPassword: string, trust: boolean) {
     setError("");
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+        body: JSON.stringify({ email: loginEmail, password: loginPassword, trustDevice: trust }),
       });
       const data = await res.json();
       if (res.ok) {
+        const existing = getRememberedProfiles().find((p) => p.email === (data.user?.email ?? loginEmail));
         rememberProfile({
           id: data.user?.id ?? null,
           email: data.user?.email ?? loginEmail,
           name: data.user?.name ?? null,
           avatar: data.user?.avatar ?? null,
+          deviceToken: data.deviceToken ?? existing?.deviceToken ?? null,
         });
         router.push("/");
       } else {
@@ -54,27 +58,78 @@ export default function LoginPage() {
     }
   }
 
+  // Silently exchanges a remembered device token for a session, skipping
+  // the password step. Returns false (and clears the stale token) if the
+  // device is no longer trusted, so the caller can fall back to a password.
+  async function performDeviceLogin(profile: RememberedProfile): Promise<boolean> {
+    if (!profile.deviceToken) return false;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/device", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: profile.email, token: profile.deviceToken }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        rememberProfile({
+          id: data.user?.id ?? profile.id,
+          email: data.user?.email ?? profile.email,
+          name: data.user?.name ?? profile.name,
+          avatar: data.user?.avatar ?? profile.avatar,
+          deviceToken: profile.deviceToken,
+        });
+        router.push("/");
+        return true;
+      }
+      rememberProfile({ ...profile, deviceToken: null });
+      return false;
+    } catch {
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
-    performLogin(email, password);
+    performLogin(email, password, trustDevice);
   }
 
   function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!activeProfile) return;
-    performLogin(activeProfile.email, password);
+    performLogin(activeProfile.email, password, trustDevice);
   }
 
-  function selectProfile(profile: RememberedProfile) {
+  async function selectProfile(profile: RememberedProfile) {
     setActiveProfile(profile);
     setPassword("");
+    setTrustDevice(false);
     setError("");
     setView("password");
+
+    if (profile.deviceToken) {
+      setSilentLogin(true);
+      const ok = await performDeviceLogin(profile);
+      if (!ok) {
+        setSilentLogin(false);
+        setProfiles(getRememberedProfiles());
+      }
+    }
   }
 
   function handleForget(e: React.MouseEvent, profileEmail: string) {
     e.stopPropagation();
+    const profile = profiles.find((p) => p.email === profileEmail);
     forgetProfile(profileEmail);
+    if (profile?.deviceToken) {
+      fetch("/api/auth/device", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: profileEmail, token: profile.deviceToken }),
+      }).catch(() => {});
+    }
     const remaining = profiles.filter((p) => p.email !== profileEmail);
     setProfiles(remaining);
     if (remaining.length === 0) setView("form");
@@ -83,6 +138,7 @@ export default function LoginPage() {
   function backToProfiles() {
     setActiveProfile(null);
     setPassword("");
+    setSilentLogin(false);
     setError("");
     setView(profiles.length > 0 ? "profiles" : "form");
   }
@@ -128,6 +184,16 @@ export default function LoginPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </span>
+                    {p.deviceToken && (
+                      <span
+                        title="This device is trusted — no password needed"
+                        className="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white border-2 border-gray-50 dark:border-slate-950 flex items-center justify-center"
+                      >
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M12 1.5c-3.6 0-6.75 1.35-9 3.6v6.15c0 5.55 3.825 10.5 9 11.7 5.175-1.2 9-6.15 9-11.7V5.1c-2.25-2.25-5.4-3.6-9-3.6zm-1.2 15.6l-4.05-4.05 1.5-1.5 2.55 2.55 6-6 1.5 1.5-7.5 7.5z" />
+                        </svg>
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs text-gray-600 dark:text-slate-400 group-hover:text-gray-900 dark:group-hover:text-white truncate w-full text-center">
                     {p.name ?? p.email}
@@ -165,20 +231,35 @@ export default function LoginPage() {
               <p className="text-xs text-gray-500 dark:text-slate-500">{activeProfile.email}</p>
             </div>
 
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              {error && (
-                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 rounded-lg px-4 py-3 text-sm">{error}</div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus
-                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
+            {silentLogin ? (
+              <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500 dark:text-slate-400">
+                <svg className="w-4 h-4 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Signing in on this trusted device…
               </div>
-              <button type="submit" disabled={loading}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition mt-2">
-                {loading ? "Signing in…" : "Sign in"}
-              </button>
-            </form>
+            ) : (
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 rounded-lg px-4 py-3 text-sm">{error}</div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Password</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus
+                    className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
+                </div>
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400 select-none">
+                  <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)}
+                    className="rounded border-gray-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500" />
+                  Trust this device — skip the password next time
+                </label>
+                <button type="submit" disabled={loading}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition mt-2">
+                  {loading ? "Signing in…" : "Sign in"}
+                </button>
+              </form>
+            )}
 
             <button onClick={backToProfiles} className="w-full text-center text-sm text-gray-500 dark:text-slate-500 hover:text-emerald-500 transition mt-4">
               ← Back to profiles
@@ -204,6 +285,11 @@ export default function LoginPage() {
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                     className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
                 </div>
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400 select-none">
+                  <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)}
+                    className="rounded border-gray-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500" />
+                  Trust this device — skip the password next time
+                </label>
                 <button type="submit" disabled={loading}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition mt-2">
                   {loading ? "Signing in…" : "Sign in"}

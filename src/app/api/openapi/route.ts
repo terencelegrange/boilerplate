@@ -67,8 +67,9 @@ const spec = {
                 type: "object",
                 required: ["email", "password"],
                 properties: {
-                  email:    { type: "string", format: "email" },
-                  password: { type: "string" },
+                  email:        { type: "string", format: "email" },
+                  password:     { type: "string" },
+                  trustDevice:  { type: "boolean", description: "If true, also issues a device token so this device can skip the password step next time (see /auth/device)" },
                 },
               },
             },
@@ -92,6 +93,7 @@ const spec = {
                         avatar: { type: "integer", nullable: true, description: "Avatar number 1-127, null for default" },
                       },
                     },
+                    deviceToken: { type: "string", description: "Opaque trust token, only present when trustDevice was true. Store client-side and redeem via POST /auth/device." },
                   },
                 },
               },
@@ -100,6 +102,81 @@ const spec = {
           400: { description: "Missing fields", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
           401: { description: "Invalid credentials", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
           403: { description: "Account pending or rejected", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+    },
+    "/auth/device": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log in with a trusted device token",
+        description: "Exchanges a device token (issued by /auth/login with trustDevice: true) for a session, skipping the password step. Sets `bp_token` + `bp_theme` cookies.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "token"],
+                properties: {
+                  email: { type: "string", format: "email" },
+                  token: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Logged in",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean" },
+                    user: {
+                      type: "object",
+                      properties: {
+                        id:     { type: "integer" },
+                        email:  { type: "string", format: "email" },
+                        name:   { type: "string", nullable: true },
+                        avatar: { type: "integer", nullable: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Missing fields", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+          401: { description: "Device token invalid or expired", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+          403: { description: "Account not active", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+        },
+      },
+      delete: {
+        tags: ["Auth"],
+        summary: "Revoke a trusted device token",
+        description: "Used by the login screen's 'forget' action to untrust a device. Public endpoint — the token itself is the credential.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "token"],
+                properties: {
+                  email: { type: "string", format: "email" },
+                  token: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Revoked (idempotent — no error if the token didn't exist)" },
+          400: { description: "Missing fields", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
         },
       },
     },

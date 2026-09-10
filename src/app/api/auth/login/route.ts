@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initDb, verifyPassword } from "@/lib/initDb";
 import { prisma } from "@/lib/prisma";
-import { signToken, COOKIE, THEME_COOKIE } from "@/lib/auth";
+import { signToken, createDeviceToken, COOKIE, THEME_COOKIE } from "@/lib/auth";
 import { auditLog, getIp } from "@/lib/audit";
 
 interface UserRow {
@@ -12,7 +12,7 @@ interface UserRow {
 
 export async function POST(req: NextRequest) {
   await initDb();
-  const { email, password } = await req.json();
+  const { email, password, trustDevice } = await req.json();
 
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
@@ -39,9 +39,15 @@ export async function POST(req: NextRequest) {
 
   await auditLog({ userId: user.id, action: "LOGIN", resource: "sessions", ip: getIp(req) });
 
+  const deviceToken = trustDevice ? await createDeviceToken(user.id) : undefined;
+  if (deviceToken) {
+    await auditLog({ userId: user.id, action: "DEVICE_TRUSTED", resource: "device_tokens", ip: getIp(req) });
+  }
+
   const res = NextResponse.json({
     ok: true,
     user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar },
+    ...(deviceToken ? { deviceToken } : {}),
   });
   res.cookies.set(COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
   res.cookies.set(THEME_COOKIE, user.theme, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
