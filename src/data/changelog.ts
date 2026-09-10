@@ -9,6 +9,7 @@
  * Format: { date: "YYYY-MM-DD", description: "Short description of the change" }
  */
 export const CHANGELOG: { date: string; description: string }[] = [
+  { date: "2026-09-10", description: "Added Netflix-style login screen — remembers previously signed-in accounts as avatar profiles on this device, with a password-only re-login step and a per-profile 'forget' control; login response now returns avatar/name for the client" },
   { date: "2026-08-04", description: "Removed site monitoring / health-check feature and environment selector to restore this as a generic app template" },
   { date: "2026-06-27", description: "Add dedicated profile page with identity and password change cards; simplify top-right dropdown to navigation links" },
 

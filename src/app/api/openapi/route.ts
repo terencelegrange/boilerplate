@@ -75,7 +75,28 @@ const spec = {
           },
         },
         responses: {
-          200: { description: "Logged in", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } } },
+          200: {
+            description: "Logged in",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean" },
+                    user: {
+                      type: "object",
+                      properties: {
+                        id:     { type: "integer" },
+                        email:  { type: "string", format: "email" },
+                        name:   { type: "string", nullable: true },
+                        avatar: { type: "integer", nullable: true, description: "Avatar number 1-127, null for default" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           400: { description: "Missing fields", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
           401: { description: "Invalid credentials", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
           403: { description: "Account pending or rejected", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },

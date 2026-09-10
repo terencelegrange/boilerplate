@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-function getDisplayAvatar(av: number | null, uid: number | null): number {
-  if (av !== null && av >= 1 && av <= 127) return av;
-  if (!uid || uid <= 0) return 1;
-  return ((uid - 1) % 127) + 1;
-}
+import { getDisplayAvatar } from "@/lib/avatar";
 
 export default function ProfilePage() {
   const [userId, setUserId] = useState<number | null>(null);

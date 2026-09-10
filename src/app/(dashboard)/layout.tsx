@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NAV_ITEMS } from "@/data/nav";
+import { getDisplayAvatar } from "@/lib/avatar";
+import { rememberProfile } from "@/lib/profiles";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -42,6 +44,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setUserName(data.name ?? data.email ?? null);
         setUserId(data.id ?? null);
         setAvatar(data.avatar ?? null);
+        if (data.email) {
+          rememberProfile({ id: data.id ?? null, email: data.email, name: data.name ?? null, avatar: data.avatar ?? null });
+        }
       })
       .catch(() => {});
   }, []);
@@ -70,12 +75,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
-  }
-
-  function getDisplayAvatar(av: number | null, uid: number | null): number {
-    if (av !== null && av >= 1 && av <= 127) return av;
-    if (!uid || uid <= 0) return 1;
-    return ((uid - 1) % 127) + 1;
   }
 
   const navItems = flags.menu

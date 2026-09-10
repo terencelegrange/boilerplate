@@ -7,6 +7,7 @@ import { auditLog, getIp } from "@/lib/audit";
 interface UserRow {
   id: number; email: string; password_hash: string;
   role: string; status: string; theme: string; name: string | null;
+  avatar: number | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rows = await prisma.$queryRaw<UserRow[]>`
-    SELECT id, email, password_hash, role, status, theme, name FROM users WHERE email = ${email} LIMIT 1
+    SELECT id, email, password_hash, role, status, theme, name, avatar FROM users WHERE email = ${email} LIMIT 1
   `;
   const user = rows[0] ?? null;
 
@@ -38,7 +39,10 @@ export async function POST(req: NextRequest) {
 
   await auditLog({ userId: user.id, action: "LOGIN", resource: "sessions", ip: getIp(req) });
 
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({
+    ok: true,
+    user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar },
+  });
   res.cookies.set(COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
   res.cookies.set(THEME_COOKIE, user.theme, { sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
   return res;
