@@ -9,6 +9,9 @@
  * Format: { date: "YYYY-MM-DD", description: "Short description of the change" }
  */
 export const CHANGELOG: { date: string; description: string }[] = [
+  { date: "2026-10-09", description: "Added Forensic Screen Watermarking — admin configurable 45-degree tiled text, adjustable opacity, and scannable user session QR codes for leak prevention" },
+  { date: "2026-10-09", description: "Added Personal Security Audit history in profile dropdown — tracks login method (Password, Passkeys, MFA Authenticator, Recovery Code), browser/OS, IP address, and timestamps" },
+  { date: "2026-10-09", description: "Implemented Multi-Factor Authentication (MFA / TOTP) with Authenticator Apps (Google/Microsoft Authenticator), QR setup, 8 emergency recovery codes, admin toggle, and post-login 2FA verification" },
   { date: "2026-10-09", description: "Implemented Passkeys (FIDO2/WebAuthn) passwordless authentication — system-wide admin toggle and telemetry in Settings, personal Security center with hardware and biometric key management, and Passkey sign-in on login screen" },
   { date: "2026-10-09", description: "Added Security settings hub with dedicated landing pages for Multi-Factor Authentication (MFA), Passkeys (FIDO2/WebAuthn), and Forensic Watermarking" },
   { date: "2026-10-09", description: "Added Observability Settings Hub with dedicated Analytics and Log Collector configuration, API key management, custom payload connector, and test suite" },

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { NAV_ITEMS } from "@/data/nav";
 import { getDisplayAvatar } from "@/lib/avatar";
 import { rememberProfile } from "@/lib/profiles";
+import WatermarkOverlay from "@/components/WatermarkOverlay";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -229,6 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
+      <WatermarkOverlay />
     </div>
   );
 }

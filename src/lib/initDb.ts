@@ -82,10 +82,12 @@ export async function initDb() {
 
     // Seed default flags
     const defaultFlags = [
-      { key: "signup",    label: "Sign Up",   description: "Allow new users to register an account" },
-      { key: "dashboard", label: "Dashboard", description: "Show the dashboard page in the navigation" },
-      { key: "menu",      label: "Navigation Menu", description: "Show navigation links in the sidebar" },
-      { key: "passkeys",  label: "Passkeys (FIDO2/WebAuthn)", description: "Allow users to register and sign in with biometric passkeys and security keys" },
+      { key: "signup",        label: "Sign Up",                         description: "Allow new users to register an account" },
+      { key: "dashboard",     label: "Dashboard",                       description: "Show the dashboard page in the navigation" },
+      { key: "menu",          label: "Navigation Menu",                 description: "Show navigation links in the sidebar" },
+      { key: "passkeys",      label: "Passkeys (FIDO2/WebAuthn)",       description: "Allow users to register and sign in with biometric passkeys and security keys" },
+      { key: "mfa",           label: "Multi-Factor Authentication (MFA)", description: "Allow users to configure and sign in with TOTP Authenticator Apps" },
+      { key: "watermarking",  label: "Forensic Watermarking",           description: "Display subtle 45-degree tiled watermark and user QR verification overlay" },
     ];
     for (const f of defaultFlags) {
       await prisma.$executeRaw`
@@ -93,6 +95,36 @@ export async function initDb() {
         VALUES (${f.key}, 1, ${f.label}, ${f.description})
       `;
     }
+
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS \`user_mfa\` (
+        \`user_id\`      INT NOT NULL,
+        \`secret\`       VARCHAR(128) NOT NULL,
+        \`enabled\`      TINYINT(1) NOT NULL DEFAULT 0,
+        \`backup_codes\` TEXT NULL,
+        \`created_at\`   DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updated_at\`   DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (\`user_id\`),
+        CONSTRAINT \`user_mfa_user_id_fk\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS \`watermark_config\` (
+        \`id\`          INT NOT NULL DEFAULT 1,
+        \`enabled\`     TINYINT(1) NOT NULL DEFAULT 0,
+        \`custom_text\` VARCHAR(255) NOT NULL DEFAULT '{{email}} • CONFIDENTIAL',
+        \`show_qr\`     TINYINT(1) NOT NULL DEFAULT 1,
+        \`opacity\`     INT NOT NULL DEFAULT 7,
+        \`updated_at\`  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (\`id\`)
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+
+    await prisma.$executeRaw`
+      INSERT IGNORE INTO \`watermark_config\` (\`id\`, \`enabled\`, \`custom_text\`, \`show_qr\`, \`opacity\`)
+      VALUES (1, 0, '{{email}} • CONFIDENTIAL', 1, 7)
+    `;
 
     await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS \`role_permissions\` (

@@ -3,7 +3,7 @@ import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { initDb } from "@/lib/initDb";
 import { prisma } from "@/lib/prisma";
 import { signToken, COOKIE, THEME_COOKIE } from "@/lib/auth";
-import { auditLog, getIp } from "@/lib/audit";
+import { auditLog, getIp, getUserAgent, parseUserAgent } from "@/lib/audit";
 import { getRPConfig, isPasskeysEnabled } from "@/lib/passkeys";
 
 interface UserRow {
@@ -143,11 +143,21 @@ export async function POST(req: NextRequest) {
     name: user.name,
   });
 
+  const ua = getUserAgent(req);
+  const parsed = parseUserAgent(ua);
+
   await auditLog({
     userId: user.id,
     action: "LOGIN_PASSKEY",
     resource: "sessions",
-    details: { credentialName: credential.name, credentialId: credential.id },
+    details: {
+      method: "passkey",
+      credentialName: credential.name,
+      credentialId: credential.id,
+      browser: parsed.browser,
+      os: parsed.os,
+      userAgent: ua,
+    },
     ip: getIp(req),
   });
 

@@ -17,11 +17,23 @@ interface SecurityTile {
 
 export default function SecuritySettingsHubPage() {
   const [passkeysEnabled, setPasskeysEnabled] = useState<boolean | null>(null);
+  const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
+  const [watermarkEnabled, setWatermarkEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/passkeys/config")
       .then((r) => r.json())
       .then((d) => setPasskeysEnabled(!!d.enabled))
+      .catch(() => {});
+
+    fetch("/api/auth/mfa/config")
+      .then((r) => r.json())
+      .then((d) => setMfaEnabled(!!d.enabled))
+      .catch(() => {});
+
+    fetch("/api/settings/watermark")
+      .then((r) => r.json())
+      .then((d) => setWatermarkEnabled(!!d.config?.enabled))
       .catch(() => {});
   }, []);
 
@@ -44,7 +56,8 @@ export default function SecuritySettingsHubPage() {
     {
       key: "mfa",
       label: "Multi-Factor Authentication (MFA)",
-      badge: "Coming Soon",
+      badge: mfaEnabled === null ? "Configurable" : mfaEnabled ? "Active" : "Disabled",
+      badgeActive: mfaEnabled === true,
       description: "Time-based One-Time Password (TOTP) authenticator app verification and emergency recovery codes.",
       icon: (
         <svg className="w-6 h-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -58,7 +71,8 @@ export default function SecuritySettingsHubPage() {
     {
       key: "watermarking",
       label: "Forensic Watermarking",
-      badge: "Coming Soon",
+      badge: watermarkEnabled === null ? "Configurable" : watermarkEnabled ? "Active" : "Disabled",
+      badgeActive: watermarkEnabled === true,
       description: "Dynamic on-screen session overlays and steganographic data export tagging to trace unauthorized data leaks.",
       icon: (
         <svg className="w-6 h-6 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -68,7 +82,7 @@ export default function SecuritySettingsHubPage() {
       ),
       bgClass: "bg-cyan-500/10 border-cyan-500/20",
       href: "/settings/security/watermarking",
-      highlight: "Dynamic Session & Export Tags",
+      highlight: "Dynamic Session & QR Tags",
     },
   ];
 
@@ -109,7 +123,7 @@ export default function SecuritySettingsHubPage() {
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                     tile.badgeActive
                       ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                      : "bg-gray-500/10 text-gray-600 dark:text-slate-400 border-gray-500/20"
                   }`}
                 >
                   {tile.badge}
@@ -148,7 +162,7 @@ export default function SecuritySettingsHubPage() {
         <div className="text-xs text-gray-600 dark:text-slate-400 space-y-1">
           <p className="font-semibold text-gray-900 dark:text-white">Enterprise Security Architecture</p>
           <p>
-            Passkey credentials operate via FIDO2 / WebAuthn cryptographic standards. Once enabled by an administrator, users can enroll hardware tokens (YubiKeys) and platform biometrics (Touch ID, Windows Hello, Face ID) directly from their Personal Security settings.
+            Security controls can be enabled independently. When enabled, users configure Passkeys and MFA directly in their Personal Security center, and screen watermarks protect against sensitive data leakage.
           </p>
         </div>
       </div>

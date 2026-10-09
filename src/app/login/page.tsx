@@ -7,7 +7,7 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import { getDisplayAvatar } from "@/lib/avatar";
 import { getRememberedProfiles, rememberProfile, forgetProfile, RememberedProfile } from "@/lib/profiles";
 
-type View = "profiles" | "password" | "form";
+type View = "profiles" | "password" | "form" | "mfa";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +23,12 @@ export default function LoginPage() {
   const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // MFA Challenge State
+  const [pendingMfaToken, setPendingMfaToken] = useState<string | null>(null);
+  const [pendingUser, setPendingUser] = useState<any | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
 
   useEffect(() => {
     fetch("/api/setup/status")
@@ -55,6 +61,15 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.mfaRequired) {
+          setPendingMfaToken(data.mfaToken);
+          setPendingUser(data.user);
+          setMfaCode("");
+          setUseBackupCode(false);
+          setView("mfa");
+          return;
+        }
+
         const existing = getRememberedProfiles().find((p) => p.email === (data.user?.email ?? loginEmail));
         rememberProfile({
           id: data.user?.id ?? null,
@@ -69,6 +84,45 @@ export default function LoginPage() {
       }
     } catch {
       setError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMfaSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pendingMfaToken || !mfaCode.trim()) return;
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/mfa/verify-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mfaToken: pendingMfaToken,
+          code: mfaCode.trim(),
+          isBackupCode: useBackupCode,
+          trustDevice,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        const existing = getRememberedProfiles().find((p) => p.email === (data.user?.email ?? pendingUser?.email));
+        rememberProfile({
+          id: data.user?.id ?? pendingUser?.id,
+          email: data.user?.email ?? pendingUser?.email,
+          name: data.user?.name ?? pendingUser?.name,
+          avatar: data.user?.avatar ?? pendingUser?.avatar,
+          deviceToken: data.deviceToken ?? existing?.deviceToken ?? null,
+        });
+        router.push("/");
+      } else {
+        setError(data.error || "MFA verification failed");
+      }
+    } catch {
+      setError("Network error during verification");
     } finally {
       setLoading(false);
     }
@@ -128,9 +182,6 @@ export default function LoginPage() {
     }
   }
 
-  // Silently exchanges a remembered device token for a session, skipping
-  // the password step. Returns false (and clears the stale token) if the
-  // device is no longer trusted, so the caller can fall back to a password.
   async function performDeviceLogin(profile: RememberedProfile): Promise<boolean> {
     if (!profile.deviceToken) return false;
     setLoading(true);
@@ -224,9 +275,101 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
           <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
-            {view === "profiles" ? "Who's signing in?" : "Sign in to your account"}
+            {view === "profiles"
+              ? "Who's signing in?"
+              : view === "mfa"
+              ? "Two-Step Verification"
+              : "Sign in to your account"}
           </p>
         </div>
+
+        {/* Two-Step Verification (MFA) View */}
+        {view === "mfa" && pendingUser && (
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+            <div className="flex flex-col items-center mb-5">
+              <img
+                src={`/avatars/${getDisplayAvatar(pendingUser.avatar, pendingUser.id)}.png`}
+                alt={pendingUser.name ?? pendingUser.email}
+                className="w-14 h-14 rounded-xl object-cover mb-2"
+              />
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{pendingUser.name ?? pendingUser.email}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-500">{pendingUser.email}</p>
+            </div>
+
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl mb-4 text-center">
+              <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                {useBackupCode
+                  ? "Enter an Emergency Recovery Code"
+                  : "Enter the 6-digit code from your Authenticator app"}
+              </p>
+            </div>
+
+            <form onSubmit={handleMfaSubmit} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 rounded-lg px-4 py-3 text-xs">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <input
+                  type="text"
+                  maxLength={useBackupCode ? 10 : 6}
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(useBackupCode ? e.target.value.toUpperCase() : e.target.value.replace(/\D/g, ""))}
+                  placeholder={useBackupCode ? "XXXX-XXXX" : "123456"}
+                  className="w-full text-center tracking-widest font-mono text-xl bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white rounded-xl py-3 focus:outline-none focus:border-indigo-500"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseBackupCode(!useBackupCode);
+                    setMfaCode("");
+                    setError("");
+                  }}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {useBackupCode ? "Use Authenticator App code" : "Use an emergency recovery code"}
+                </button>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400 select-none">
+                <input
+                  type="checkbox"
+                  checked={trustDevice}
+                  onChange={(e) => setTrustDevice(e.target.checked)}
+                  className="rounded border-gray-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500"
+                />
+                Trust this device for 30 days
+              </label>
+
+              <button
+                type="submit"
+                disabled={loading || !mfaCode.trim()}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition shadow-sm"
+              >
+                {loading ? "Verifying code…" : "Verify & Sign In"}
+              </button>
+            </form>
+
+            <button
+              onClick={() => {
+                setPendingMfaToken(null);
+                setPendingUser(null);
+                setError("");
+                setView(profiles.length > 0 ? "profiles" : "form");
+              }}
+              className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 mt-4 transition"
+            >
+              ← Cancel & sign in as someone else
+            </button>
+          </div>
+        )}
 
         {/* Netflix-style profile picker */}
         {view === "profiles" && (
