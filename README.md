@@ -31,12 +31,18 @@ This **Boilerplate** serves as the definitive starting point for any modern web 
 - **Granular Navigation Permissions**: Many-to-many permission mapping (`role_permissions` table).
 - **Settings $\rightarrow$ Roles UI**: Interactive permission matrix to enable or disable specific navigation items per role (Admin, Editor, Viewer).
 
-### 4. User Management (Settings $\rightarrow$ Users)
+### 4. Security Hub (Settings $\rightarrow$ Security)
+- **Security & Access Controls**: Centralized hub managing identity verification, biometric authentication, and data governance.
+- **Multi-Factor Authentication (MFA)**: Landing page (`/settings/security/mfa`) for planned RFC 6238 TOTP authenticator pairing and emergency recovery codes.
+- **Passkeys (FIDO2 / WebAuthn)**: Landing page (`/settings/security/passkeys`) for biometric Touch ID, Face ID, Windows Hello, and hardware YubiKey passwordless authentication.
+- **Forensic Watermarking**: Landing page (`/settings/security/watermarking`) for dynamic visual session overlays and steganographic data export tagging to trace leaks.
+
+### 5. User Management (Settings $\rightarrow$ Users)
 - **User Directory**: View, search, and manage all registered accounts.
 - **Lifecycle Controls**: Approve pending signups, reject accounts, promote users to admins, or remove users.
 - **Profile Customization**: Choose avatar illustrations and update personal details.
 
-### 5. Audit Logging (Settings $\rightarrow$ Audit Log)
+### 6. Audit Logging (Settings $\rightarrow$ Audit Log)
 - **Non-Blocking Telemetry**: Centralized `auditLog()` helper records user actions, IPs, timestamps, and metadata without slowing down web requests.
 - **Paginated Viewer**: Searchable, filterable audit log stream in the administrative dashboard.
 
@@ -94,6 +100,11 @@ src/
         audit/page.tsx          # Embedded audit log viewer
         feature-flags/page.tsx  # Dynamic feature flag toggles
         api-access/page.tsx     # Developer API keys
+        security/               # Security settings hub
+          page.tsx              # Security summary hub (MFA, Passkeys, Watermarking)
+          mfa/page.tsx          # Multi-Factor Authentication landing page
+          passkeys/page.tsx     # Passkeys / WebAuthn landing page
+          watermarking/page.tsx # Forensic Watermarking landing page
         observability/          # Observability settings hub
           page.tsx              # Analytics & Log Collector summary cards
           analytics/page.tsx    # Analytics ingestion connector config & test

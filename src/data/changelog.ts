@@ -9,6 +9,7 @@
  * Format: { date: "YYYY-MM-DD", description: "Short description of the change" }
  */
 export const CHANGELOG: { date: string; description: string }[] = [
+  { date: "2026-10-09", description: "Added Security settings hub with dedicated landing pages for Multi-Factor Authentication (MFA), Passkeys (FIDO2/WebAuthn), and Forensic Watermarking" },
   { date: "2026-10-09", description: "Added Observability Settings Hub with dedicated Analytics and Log Collector configuration, API key management, custom payload connector, and test suite" },
   { date: "2026-10-09", description: "Added first-run install and setup wizard with live MySQL database connection testing, application configuration, and administrator account creation" },
   { date: "2026-09-10", description: "Added 'Trust this device' to login — a checkbox at the password step issues a 30-day device token so a remembered profile can sign in without re-entering the password; revocable via the profile's 'forget' control" },
