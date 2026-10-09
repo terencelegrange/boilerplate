@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { startAuthentication } from "@simplewebauthn/browser";
 import { getDisplayAvatar } from "@/lib/avatar";
 import { getRememberedProfiles, rememberProfile, forgetProfile, RememberedProfile } from "@/lib/profiles";
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [view, setView] = useState<View>("form");
   const [activeProfile, setActiveProfile] = useState<RememberedProfile | null>(null);
   const [silentLogin, setSilentLogin] = useState(false);
+  const [passkeysEnabled, setPasskeysEnabled] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +29,13 @@ export default function LoginPage() {
       .then((r) => r.json())
       .then(({ complete }) => {
         if (!complete) router.replace("/setup");
+      })
+      .catch(() => {});
+
+    fetch("/api/auth/passkeys/config")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.enabled) setPasskeysEnabled(true);
       })
       .catch(() => {});
 
@@ -60,6 +69,60 @@ export default function LoginPage() {
       }
     } catch {
       setError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function performPasskeyLogin(targetEmail?: string) {
+    setError("");
+    setLoading(true);
+    try {
+      const optRes = await fetch("/api/auth/passkeys/login/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(targetEmail ? { email: targetEmail } : {}),
+      });
+      const optData = await optRes.json();
+      if (!optRes.ok) {
+        throw new Error(optData.error || "Failed to initialize passkey sign-in");
+      }
+
+      let authResp;
+      try {
+        authResp = await startAuthentication({ optionsJSON: optData.options });
+      } catch (err: any) {
+        if (err.name === "NotAllowedError" || err.message?.includes("cancelled") || err.message?.includes("timed out")) {
+          setLoading(false);
+          return;
+        }
+        throw new Error(err.message || "Passkey authentication was not completed");
+      }
+
+      const verifyRes = await fetch("/api/auth/passkeys/login/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          response: authResp,
+          challengeId: optData.challengeId,
+        }),
+      });
+
+      const data = await verifyRes.json();
+      if (verifyRes.ok && data.ok) {
+        rememberProfile({
+          id: data.user?.id ?? null,
+          email: data.user?.email ?? targetEmail ?? "",
+          name: data.user?.name ?? null,
+          avatar: data.user?.avatar ?? null,
+          deviceToken: null,
+        });
+        router.push("/");
+      } else {
+        setError(data.error || "Passkey authentication failed");
+      }
+    } catch (err: any) {
+      setError(err.message || "Sign in failed");
     } finally {
       setLoading(false);
     }
@@ -168,7 +231,7 @@ export default function LoginPage() {
         {/* Netflix-style profile picker */}
         {view === "profiles" && (
           <div>
-            <div className="flex flex-wrap items-center justify-center gap-6 mb-8">
+            <div className="flex flex-wrap items-center justify-center gap-6 mb-6">
               {profiles.map((p) => (
                 <button
                   key={p.email}
@@ -222,6 +285,22 @@ export default function LoginPage() {
                 </span>
               </button>
             </div>
+
+            {passkeysEnabled && (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => performPasskeyLogin()}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-emerald-500/50 text-gray-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 text-xs font-semibold shadow-sm transition"
+                >
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                  </svg>
+                  {loading ? "Authenticating Passkey…" : "Sign in with Passkey / Biometrics"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -265,6 +344,31 @@ export default function LoginPage() {
                   className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition mt-2">
                   {loading ? "Signing in…" : "Sign in"}
                 </button>
+
+                {passkeysEnabled && (
+                  <>
+                    <div className="relative my-3">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200 dark:border-slate-800" />
+                      </div>
+                      <div className="relative flex justify-center text-[11px] uppercase">
+                        <span className="bg-white dark:bg-slate-900 px-2 text-gray-400">or</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => performPasskeyLogin(activeProfile.email)}
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-semibold rounded-lg px-4 py-2.5 text-xs transition"
+                    >
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                      </svg>
+                      Sign in with Passkey
+                    </button>
+                  </>
+                )}
               </form>
             )}
 
@@ -301,6 +405,31 @@ export default function LoginPage() {
                   className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition mt-2">
                   {loading ? "Signing in…" : "Sign in"}
                 </button>
+
+                {passkeysEnabled && (
+                  <>
+                    <div className="relative my-3">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200 dark:border-slate-800" />
+                      </div>
+                      <div className="relative flex justify-center text-[11px] uppercase">
+                        <span className="bg-white dark:bg-slate-900 px-2 text-gray-400">or</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => performPasskeyLogin(email ? email : undefined)}
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-semibold rounded-lg px-4 py-2.5 text-xs transition"
+                    >
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                      </svg>
+                      Sign in with Passkey / Security Key
+                    </button>
+                  </>
+                )}
               </form>
             </div>
 

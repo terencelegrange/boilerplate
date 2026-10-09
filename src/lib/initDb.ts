@@ -85,6 +85,7 @@ export async function initDb() {
       { key: "signup",    label: "Sign Up",   description: "Allow new users to register an account" },
       { key: "dashboard", label: "Dashboard", description: "Show the dashboard page in the navigation" },
       { key: "menu",      label: "Navigation Menu", description: "Show navigation links in the sidebar" },
+      { key: "passkeys",  label: "Passkeys (FIDO2/WebAuthn)", description: "Allow users to register and sign in with biometric passkeys and security keys" },
     ];
     for (const f of defaultFlags) {
       await prisma.$executeRaw`
@@ -98,6 +99,35 @@ export async function initDb() {
         \`role\`    VARCHAR(20) NOT NULL,
         \`nav_key\` VARCHAR(50) NOT NULL,
         PRIMARY KEY (\`role\`, \`nav_key\`)
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS \`passkey_credentials\` (
+        \`id\`          VARCHAR(255) NOT NULL,
+        \`user_id\`     INT NOT NULL,
+        \`public_key\`  TEXT NOT NULL,
+        \`counter\`     BIGINT NOT NULL DEFAULT 0,
+        \`device_type\` VARCHAR(64) NOT NULL DEFAULT 'singleDevice',
+        \`backed_up\`   TINYINT(1) NOT NULL DEFAULT 0,
+        \`transports\`  VARCHAR(255) NULL,
+        \`name\`        VARCHAR(200) NOT NULL DEFAULT 'Passkey',
+        \`created_at\`  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`last_used\`   DATETIME NULL,
+        PRIMARY KEY (\`id\`),
+        KEY \`passkey_credentials_user_id\` (\`user_id\`),
+        CONSTRAINT \`passkey_credentials_user_id_fk\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `;
+
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS \`passkey_challenges\` (
+        \`id\`         VARCHAR(255) NOT NULL,
+        \`challenge\`  VARCHAR(255) NOT NULL,
+        \`user_id\`    INT NULL,
+        \`expires_at\` DATETIME NOT NULL,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (\`id\`)
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     `;
 

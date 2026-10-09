@@ -1,54 +1,77 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const SECURITY_TILES = [
-  {
-    key: "mfa",
-    label: "Multi-Factor Authentication (MFA)",
-    badge: "Coming Soon",
-    description: "Time-based One-Time Password (TOTP) authenticator app verification and emergency recovery codes.",
-    icon: (
-      <svg className="w-6 h-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-      </svg>
-    ),
-    bgClass: "bg-indigo-500/10 border-indigo-500/20",
-    href: "/settings/security/mfa",
-    highlight: "TOTP 2FA & Backup Codes",
-  },
-  {
-    key: "passkeys",
-    label: "Passkeys (FIDO2 / WebAuthn)",
-    badge: "Coming Soon",
-    description: "Biometric passwordless authentication using Face ID, Touch ID, Windows Hello, and hardware YubiKeys.",
-    icon: (
-      <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-      </svg>
-    ),
-    bgClass: "bg-emerald-500/10 border-emerald-500/20",
-    href: "/settings/security/passkeys",
-    highlight: "Biometric & Hardware Keys",
-  },
-  {
-    key: "watermarking",
-    label: "Forensic Watermarking",
-    badge: "Coming Soon",
-    description: "Dynamic on-screen session overlays and steganographic data export tagging to trace unauthorized data leaks.",
-    icon: (
-      <svg className="w-6 h-6 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    bgClass: "bg-cyan-500/10 border-cyan-500/20",
-    href: "/settings/security/watermarking",
-    highlight: "Dynamic Session & Export Tags",
-  },
-];
+interface SecurityTile {
+  key: string;
+  label: string;
+  badge: string;
+  badgeActive?: boolean;
+  description: string;
+  icon: React.ReactNode;
+  bgClass: string;
+  href: string;
+  highlight: string;
+}
 
 export default function SecuritySettingsHubPage() {
+  const [passkeysEnabled, setPasskeysEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/passkeys/config")
+      .then((r) => r.json())
+      .then((d) => setPasskeysEnabled(!!d.enabled))
+      .catch(() => {});
+  }, []);
+
+  const tiles: SecurityTile[] = [
+    {
+      key: "passkeys",
+      label: "Passkeys (FIDO2 / WebAuthn)",
+      badge: passkeysEnabled === null ? "Configurable" : passkeysEnabled ? "Active" : "Disabled",
+      badgeActive: passkeysEnabled === true,
+      description: "Biometric passwordless authentication using Face ID, Touch ID, Windows Hello, and hardware YubiKeys.",
+      icon: (
+        <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+        </svg>
+      ),
+      bgClass: "bg-emerald-500/10 border-emerald-500/20",
+      href: "/settings/security/passkeys",
+      highlight: "Biometric & Hardware Keys",
+    },
+    {
+      key: "mfa",
+      label: "Multi-Factor Authentication (MFA)",
+      badge: "Coming Soon",
+      description: "Time-based One-Time Password (TOTP) authenticator app verification and emergency recovery codes.",
+      icon: (
+        <svg className="w-6 h-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+      ),
+      bgClass: "bg-indigo-500/10 border-indigo-500/20",
+      href: "/settings/security/mfa",
+      highlight: "TOTP 2FA & Backup Codes",
+    },
+    {
+      key: "watermarking",
+      label: "Forensic Watermarking",
+      badge: "Coming Soon",
+      description: "Dynamic on-screen session overlays and steganographic data export tagging to trace unauthorized data leaks.",
+      icon: (
+        <svg className="w-6 h-6 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      bgClass: "bg-cyan-500/10 border-cyan-500/20",
+      href: "/settings/security/watermarking",
+      highlight: "Dynamic Session & Export Tags",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb & Header */}
@@ -71,7 +94,7 @@ export default function SecuritySettingsHubPage() {
 
       {/* Security Tiles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {SECURITY_TILES.map((tile) => (
+        {tiles.map((tile) => (
           <Link
             key={tile.key}
             href={tile.href}
@@ -82,7 +105,13 @@ export default function SecuritySettingsHubPage() {
                 <div className={`w-12 h-12 rounded-xl border flex items-center justify-center group-hover:scale-105 transition ${tile.bgClass}`}>
                   {tile.icon}
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    tile.badgeActive
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                  }`}
+                >
                   {tile.badge}
                 </span>
               </div>
@@ -102,7 +131,7 @@ export default function SecuritySettingsHubPage() {
                 {tile.highlight}
               </span>
               <span className="text-emerald-500 font-semibold group-hover:translate-x-0.5 transition inline-flex items-center gap-1">
-                View &rarr;
+                Configure &rarr;
               </span>
             </div>
           </Link>
@@ -119,7 +148,7 @@ export default function SecuritySettingsHubPage() {
         <div className="text-xs text-gray-600 dark:text-slate-400 space-y-1">
           <p className="font-semibold text-gray-900 dark:text-white">Enterprise Security Architecture</p>
           <p>
-            These security modules are designed to integrate directly with the existing RBAC system and session authorization middleware. Once released, admins will be able to enforce mandatory MFA or Passkey enrollment on a per-role basis.
+            Passkey credentials operate via FIDO2 / WebAuthn cryptographic standards. Once enabled by an administrator, users can enroll hardware tokens (YubiKeys) and platform biometrics (Touch ID, Windows Hello, Face ID) directly from their Personal Security settings.
           </p>
         </div>
       </div>
