@@ -9,6 +9,8 @@
  * Format: { date: "YYYY-MM-DD", description: "Short description of the change" }
  */
 export const CHANGELOG: { date: string; description: string }[] = [
+  { date: "2026-10-09", description: "Added Observability Settings Hub with dedicated Analytics and Log Collector configuration, API key management, custom payload connector, and test suite" },
+  { date: "2026-10-09", description: "Added first-run install and setup wizard with live MySQL database connection testing, application configuration, and administrator account creation" },
   { date: "2026-09-10", description: "Added 'Trust this device' to login — a checkbox at the password step issues a 30-day device token so a remembered profile can sign in without re-entering the password; revocable via the profile's 'forget' control" },
   { date: "2026-09-10", description: "Added Netflix-style login screen — remembers previously signed-in accounts as avatar profiles on this device, with a password-only re-login step and a per-profile 'forget' control; login response now returns avatar/name for the client" },
   { date: "2026-08-04", description: "Removed site monitoring / health-check feature and environment selector to restore this as a generic app template" },

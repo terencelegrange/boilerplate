@@ -23,10 +23,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then(({ complete }) => {
+        if (!complete) router.replace("/setup");
+      })
+      .catch(() => {});
+
     const remembered = getRememberedProfiles();
     setProfiles(remembered);
     setView(remembered.length > 0 ? "profiles" : "form");
-  }, []);
+  }, [router]);
 
   async function performLogin(loginEmail: string, loginPassword: string, trust: boolean) {
     setError("");
@@ -161,7 +168,7 @@ export default function LoginPage() {
         {/* Netflix-style profile picker */}
         {view === "profiles" && (
           <div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-6 justify-items-center mb-8">
+            <div className="flex flex-wrap items-center justify-center gap-6 mb-8">
               {profiles.map((p) => (
                 <button
                   key={p.email}
