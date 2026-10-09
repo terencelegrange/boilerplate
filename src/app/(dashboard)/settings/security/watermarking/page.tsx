@@ -8,6 +8,7 @@ interface WatermarkConfig {
   customText: string;
   showQr: boolean;
   opacity: number;
+  fontSize: number;
 }
 
 export default function AdminWatermarkingSettingsPage() {
@@ -15,6 +16,7 @@ export default function AdminWatermarkingSettingsPage() {
   const [customText, setCustomText] = useState("{{email}} • CONFIDENTIAL");
   const [showQr, setShowQr] = useState(true);
   const [opacity, setOpacity] = useState(7);
+  const [fontSize, setFontSize] = useState(12);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -33,6 +35,7 @@ export default function AdminWatermarkingSettingsPage() {
         setCustomText(data.config.customText || "{{email}} • CONFIDENTIAL");
         setShowQr(data.config.showQr !== false);
         setOpacity(data.config.opacity || 7);
+        setFontSize(data.config.fontSize || 12);
       }
     } catch {
       setMsg({ type: "error", text: "Failed to load watermarking configuration" });
@@ -54,6 +57,7 @@ export default function AdminWatermarkingSettingsPage() {
           customText,
           showQr,
           opacity,
+          fontSize,
         }),
       });
       const data = await res.json();
@@ -73,6 +77,10 @@ export default function AdminWatermarkingSettingsPage() {
       setSaving(false);
     }
   }
+
+  const previewPatternWidth = Math.max(260, 180 + fontSize * 8);
+  const previewPatternHeight = Math.max(150, 120 + fontSize * 3);
+  const previewQrSize = Math.max(20, Math.min(36, fontSize * 2.2));
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -191,6 +199,31 @@ export default function AdminWatermarkingSettingsPage() {
               />
             </div>
 
+            {/* Font Size Slider */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">
+                  Font Size ({fontSize}px)
+                </label>
+                <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400">{fontSize}px</span>
+              </div>
+              <input
+                type="range"
+                min="8"
+                max="32"
+                step="1"
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                className="w-full accent-cyan-500 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                <span>Small (8px)</span>
+                <span>Default (12px)</span>
+                <span>Large (32px)</span>
+              </div>
+            </div>
+
+            {/* Opacity Slider */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">
@@ -218,7 +251,7 @@ export default function AdminWatermarkingSettingsPage() {
           {/* Live Interactive Preview Box */}
           <div className="space-y-2">
             <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">Live Appearance Preview</span>
-            <div className="relative h-56 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950/60 overflow-hidden flex items-center justify-center p-4 select-none">
+            <div className="relative h-64 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950/60 overflow-hidden flex items-center justify-center p-4 select-none">
               {/* Fake UI Content */}
               <div className="w-full space-y-2.5 opacity-60">
                 <div className="h-3 bg-gray-200 dark:bg-slate-800 rounded w-1/3" />
@@ -238,19 +271,28 @@ export default function AdminWatermarkingSettingsPage() {
                   <defs>
                     <pattern
                       id="preview-watermark-pattern"
-                      width="260"
-                      height="150"
+                      width={previewPatternWidth}
+                      height={previewPatternHeight}
                       patternUnits="userSpaceOnUse"
                       patternTransform="rotate(-35)"
                     >
                       {showQr && (
-                        <rect x="10" y="55" width="22" height="22" rx="2" fill="currentColor" opacity="0.8" />
+                        <rect
+                          x="10"
+                          y={previewPatternHeight / 2 - previewQrSize / 2}
+                          width={previewQrSize}
+                          height={previewQrSize}
+                          rx="2"
+                          fill="currentColor"
+                          opacity="0.8"
+                        />
                       )}
                       <text
-                        x={showQr ? "40" : "15"}
-                        y="72"
+                        x={showQr ? 18 + previewQrSize : 15}
+                        y={previewPatternHeight / 2 + fontSize * 0.35}
                         fill="currentColor"
-                        className="text-gray-900 dark:text-white font-mono font-bold text-[10px] tracking-wider"
+                        style={{ fontSize: `${fontSize}px` }}
+                        className="text-gray-900 dark:text-white font-mono font-bold tracking-wider"
                       >
                         {customText.replace(/\{\{email\}\}/gi, "admin@example.com").replace(/\{\{date\}\}/gi, "2026-10-09")}
                       </text>

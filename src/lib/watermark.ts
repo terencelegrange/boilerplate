@@ -6,6 +6,7 @@ export interface WatermarkConfig {
   customText: string;
   showQr: boolean;
   opacity: number;
+  fontSize: number;
 }
 
 export async function getWatermarkConfig(): Promise<WatermarkConfig> {
@@ -20,8 +21,9 @@ export async function getWatermarkConfig(): Promise<WatermarkConfig> {
       custom_text: string;
       show_qr: number;
       opacity: number;
+      font_size?: number;
     }[]>`
-      SELECT enabled, custom_text, show_qr, opacity FROM watermark_config WHERE id = 1 LIMIT 1
+      SELECT enabled, custom_text, show_qr, opacity, font_size FROM watermark_config WHERE id = 1 LIMIT 1
     `;
 
     if (rows.length === 0) {
@@ -30,6 +32,7 @@ export async function getWatermarkConfig(): Promise<WatermarkConfig> {
         customText: "{{email}} • CONFIDENTIAL",
         showQr: true,
         opacity: 7,
+        fontSize: 12,
       };
     }
 
@@ -39,6 +42,7 @@ export async function getWatermarkConfig(): Promise<WatermarkConfig> {
       customText: row.custom_text || "{{email}} • CONFIDENTIAL",
       showQr: row.show_qr === 1,
       opacity: Math.max(1, Math.min(100, row.opacity || 7)),
+      fontSize: Math.max(8, Math.min(36, row.font_size || 12)),
     };
   } catch (e) {
     console.error("[getWatermarkConfig] error:", e);
@@ -47,6 +51,7 @@ export async function getWatermarkConfig(): Promise<WatermarkConfig> {
       customText: "{{email}} • CONFIDENTIAL",
       showQr: true,
       opacity: 7,
+      fontSize: 12,
     };
   }
 }
@@ -58,7 +63,7 @@ export async function generateWatermarkOverlayPayload(user: {
 }) {
   const config = await getWatermarkConfig();
   if (!config.enabled) {
-    return { enabled: false, text: "", qrDataUrl: null, opacity: 7 };
+    return { enabled: false, text: "", qrDataUrl: null, opacity: 7, fontSize: 12 };
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -93,5 +98,6 @@ export async function generateWatermarkOverlayPayload(user: {
     text,
     qrDataUrl,
     opacity: config.opacity,
+    fontSize: config.fontSize,
   };
 }

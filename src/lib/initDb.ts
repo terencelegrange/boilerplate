@@ -116,14 +116,20 @@ export async function initDb() {
         \`custom_text\` VARCHAR(255) NOT NULL DEFAULT '{{email}} • CONFIDENTIAL',
         \`show_qr\`     TINYINT(1) NOT NULL DEFAULT 1,
         \`opacity\`     INT NOT NULL DEFAULT 7,
+        \`font_size\`   INT NOT NULL DEFAULT 12,
         \`updated_at\`  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
         PRIMARY KEY (\`id\`)
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     `;
 
+    // Ensure font_size column exists for existing tables
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE \`watermark_config\` ADD COLUMN IF NOT EXISTS \`font_size\` INT NOT NULL DEFAULT 12
+    `).catch(() => {});
+
     await prisma.$executeRaw`
-      INSERT IGNORE INTO \`watermark_config\` (\`id\`, \`enabled\`, \`custom_text\`, \`show_qr\`, \`opacity\`)
-      VALUES (1, 0, '{{email}} • CONFIDENTIAL', 1, 7)
+      INSERT IGNORE INTO \`watermark_config\` (\`id\`, \`enabled\`, \`custom_text\`, \`show_qr\`, \`opacity\`, \`font_size\`)
+      VALUES (1, 0, '{{email}} • CONFIDENTIAL', 1, 7, 12)
     `;
 
     await prisma.$executeRaw`

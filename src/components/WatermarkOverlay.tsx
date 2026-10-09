@@ -7,6 +7,7 @@ interface WatermarkData {
   text: string;
   qrDataUrl: string | null;
   opacity: number;
+  fontSize?: number;
 }
 
 export default function WatermarkOverlay() {
@@ -28,6 +29,10 @@ export default function WatermarkOverlay() {
   if (!data || !data.enabled || !data.text) return null;
 
   const opacityStyle = { opacity: Math.max(0.02, Math.min(0.3, data.opacity / 100)) };
+  const fontSize = data.fontSize || 12;
+  const patternWidth = Math.max(380, 280 + fontSize * 10);
+  const patternHeight = Math.max(220, 180 + fontSize * 4);
+  const qrSize = Math.max(32, Math.min(48, fontSize * 2.8));
 
   return (
     <div
@@ -39,8 +44,8 @@ export default function WatermarkOverlay() {
         <defs>
           <pattern
             id="watermark-pattern"
-            width="380"
-            height="220"
+            width={patternWidth}
+            height={patternHeight}
             patternUnits="userSpaceOnUse"
             patternTransform="rotate(-35)"
           >
@@ -48,17 +53,18 @@ export default function WatermarkOverlay() {
               <image
                 href={data.qrDataUrl}
                 x="20"
-                y="85"
-                width="36"
-                height="36"
+                y={patternHeight / 2 - qrSize / 2}
+                width={qrSize}
+                height={qrSize}
                 opacity="0.9"
               />
             )}
             <text
-              x={data.qrDataUrl ? "64" : "30"}
-              y="108"
+              x={data.qrDataUrl ? 28 + qrSize : 24}
+              y={patternHeight / 2 + fontSize * 0.35}
               fill="currentColor"
-              className="text-gray-900 dark:text-white font-mono font-bold text-xs tracking-wider"
+              style={{ fontSize: `${fontSize}px` }}
+              className="text-gray-900 dark:text-white font-mono font-bold tracking-wider"
             >
               {data.text}
             </text>
